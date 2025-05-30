@@ -238,6 +238,9 @@ public:
 		switch (type)
 		{
 		case SMOOTH:
+			// Qiu, J., & Shu, C.-W. (2005).
+			// Runge--Kutta Discontinuous Galerkin Method Using WENO Limiters.
+			// SIAM Journal on Scientific Computing, 26(3), 907-929. doi:10.1137/s1064827503425298
 			xL = 0.0;
 			xR = 2.0;
 			yL = 0.0;
@@ -255,11 +258,11 @@ public:
 			};
 			u0 = [this](double x, double y)
 			{
-				return 1;
+				return 0.7;
 			};
 			v0 = [this](double x, double y)
 			{
-				return 1;
+				return 0.3;
 			};
 			pre0 = [this](double x, double y)
 			{
@@ -269,11 +272,14 @@ public:
 			// 函数解析解
 			this->u_exact_exist = true;
 			this->theVarExact = [](double x, double y, double t)
-			{ return 1 + 0.2 * sin(M_PI * (x + y - 2 * t)); };
+			{ return 1 + 0.2 * sin(M_PI * (x + y - t)); };
 			this->theVarUh = [](Array1D<double> Uh)
 			{ return Uh[0]; };
 			break;
 		case Riemann1:
+			// Fan, C., & Wu, K. (2024).
+			// High-order oscillation-eliminating Hermite WENO method for hyperbolic conservation laws.
+			// Journal of Computational Physics, 519. doi:10.1016/j.jcp.2024.113435
 			xL = 0.0;
 			xR = 2.0;
 			yL = 0.0;
@@ -350,6 +356,9 @@ public:
 			{ return Uh[0]; };
 			break;
 		case Riemann2:
+			// Luo, X., &Wu, S.- p.(2021).
+			// Improvement of the WENO - Z + scheme.
+			// Computers &Fluids, 218. doi : 10.1016 / j.compfluid.2021.104855
 			xL = 0.0;
 			xR = 1.0;
 			yL = 0.0;
@@ -426,6 +435,9 @@ public:
 			{ return Uh[0]; };
 			break;
 		case RTI:
+			// Fleischmann, N., Adami, S., & Adams, N. A. (2019).
+			// Numerical symmetry-preserving techniques for low-dissipation shock-capturing schemes.
+			// Computers & Fluids, 189, 94-107. doi:10.1016/j.compfluid.2019.04.004
 			xL = 0.0;
 			xR = 0.25;
 			yL = 0.0;
