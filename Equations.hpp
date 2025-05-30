@@ -21,11 +21,11 @@ enum TESTCASETYPE
 };
 enum BOUNDARYTYPE
 {
-	PERIOD = 0,
-	slip = 1,
+	PERIOD = 0, // 周期边界条件
+	slip = 1,	//
 	DIRICHLET = 2,
-	special = 3,
-	symmetric = 4
+	special = 3,  // 流入边界条件
+	symmetric = 4 // 流出边界条件
 };
 
 // 方程

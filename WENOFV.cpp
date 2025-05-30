@@ -209,7 +209,7 @@ void CWENOFV::run(std::map<std::string, std::string> m_option)
     m_solverTimer.start();
 
     initializeAve();
-    // outputAve("initial");
+    outputAve("initial");
 
     m_mainTimer.start();
 
@@ -259,10 +259,10 @@ void CWENOFV::run(std::map<std::string, std::string> m_option)
         }
 
         // Output average values every 1000 iterations
-        // if (count % 1 == 0)
-        // {
-        //     outputAve("intermediate");
-        // }
+        if (count % 100 == 0)
+        {
+            outputAve("intermediate");
+        }
     }
 
     m_mainTimer.pause();
@@ -444,7 +444,7 @@ void CWENOFV::assembleRHS(void)
 
     getFlux();
 
-    // Assemble source term for specific test cases (e.g., gravity term for DAMBREAK)
+    // Assemble source term for specific test cases
     assembleSourceTerm();
 }
 void CWENOFV::fluxSplit(Array1D<double> uh, double nx, double ny, Array1D<double> &flux_minus, Array1D<double> &flux_plus)
@@ -536,11 +536,11 @@ void CWENOFV::getFlux(void)
             for (int k = 0; k < m_varNum; ++k)
             {
                 // 左偏重构：
-                v_half_plus[k] = WENO5threconstruction(
+                v_half_plus[k] = useWENO(
                     v_plus[0][k], v_plus[1][k], v_plus[2][k], v_plus[3][k], v_plus[4][k], 3);
 
                 // 右偏重构：
-                v_half_minus[k] = WENO5threconstruction(
+                v_half_minus[k] = useWENO(
                     v_minus[0][k], v_minus[1][k], v_minus[2][k], v_minus[3][k], v_minus[4][k], 0);
             }
 
@@ -613,12 +613,12 @@ void CWENOFV::getFlux(void)
             for (int k = 0; k < m_varNum; ++k)
             {
                 // 左偏重构
-                v_half_plus[k] = WENO5threconstruction(
+                v_half_plus[k] = useWENO(
                     v_plus[0][k], v_plus[1][k], v_plus[2][k],
                     v_plus[3][k], v_plus[4][k], 3);
 
                 // 右偏重构
-                v_half_minus[k] = WENO5threconstruction(
+                v_half_minus[k] = useWENO(
                     v_minus[0][k], v_minus[1][k], v_minus[2][k],
                     v_minus[3][k], v_minus[4][k], 0);
             }
@@ -1008,7 +1008,6 @@ void CWENOFV::setBoundary(void)
 
 void CWENOFV::outputAve(std::string prefix)
 {
-
     m_MPITimer.start();
     MPICommunication();
     m_MPITimer.pause();
@@ -1159,24 +1158,23 @@ inline void matVecMul4(Array2D<double> matrix, Array1D<double> vec, Array1D<doub
     result[3] = matrix[3][0] * vec[0] + matrix[3][1] * vec[1] + matrix[3][2] * vec[2] + matrix[3][3] * vec[3];
 }
 
-// void CWENOFV::copyConfig()
-// {
-//     // Input file path and name
-//     std::filesystem::path inputFileName = "./input/config.cfg";
-//     // Output file path and name
-//     std::filesystem::path outputFileName = "./output/config_copy.cfg";
-
-//     try
-//     {
-//         // Use std::filesystem::copy to copy the file
-//         std::filesystem::copy(inputFileName, outputFileName, std::filesystem::copy_options::overwrite_existing);
-//         std::cout << "File copied successfully." << std::endl;
-//     }
-//     catch (const std::filesystem::filesystem_error &e)
-//     {
-//         std::cerr << "Error: " << e.what() << std::endl;
-//     }
-// }
+void CWENOFV::copyConfig()
+{
+    // Input file path and name
+    std::filesystem::path inputFileName = "./input/config.cfg";
+    // Output file path and name
+    std::filesystem::path outputFileName = "./output/config_copy.cfg";
+    try
+    {
+        // Use std::filesystem::copy to copy the file
+        std::filesystem::copy(inputFileName, outputFileName, std::filesystem::copy_options::overwrite_existing);
+        std::cout << "File copied successfully." << std::endl;
+    }
+    catch (const std::filesystem::filesystem_error &e)
+    {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
+}
 void CWENOFV::outputAccuracy(std::string prefix)
 {
     if (m_rank == 0)

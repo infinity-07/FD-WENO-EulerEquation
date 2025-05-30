@@ -2,7 +2,8 @@
 CC = mpicxx
 
 # 编译选项
-CFLAGS = -Wall -O4 -g -fopenmp
+# CFLAGS = -Wall -O4 -g -fopenmp
+CFLAGS = -Wall -O4 -g
 DEPFLAGS = -MMD -MP
 
 # 源文件
