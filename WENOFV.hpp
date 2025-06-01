@@ -3,9 +3,16 @@
 
 #include <iostream>
 #include <fstream>
+#include <map>
 #include "scTools/scTools.h"
 #include "Equations.hpp"
-#include <map>
+
+enum RKMETHOD
+{
+    RK1 = 0,
+    RK2 = 1,
+    RK3 = 2,
+};
 
 class Cgrid
 {
@@ -25,16 +32,6 @@ public:
         : m_xCenter(xCenter), m_yCenter(yCenter)
     {
     }
-};
-
-class CgridFlux
-{
-public:
-    // 成员变量
-    Array1D<double> rightFlux;
-    Array1D<double> leftFlux;
-    Array1D<double> topFlux;
-    Array1D<double> bottomFlux;
 };
 
 class Cvector
@@ -72,7 +69,6 @@ public:
     int m_ghostCellNum;
     int m_startPointX, m_endPointX;
     int m_startPointY, m_endPointY;
-    Array2D<double> m_worldTotalTheta;
 
     int m_numPointsX, m_numPointsY;
 
@@ -93,18 +89,12 @@ public:
     double m_outputTime;
     double m_restartTime;
     double m_now;
-
-    Array2D<double> m_totalTheta;
+    double m_start_time;
 
 public:
     Array2D<Cvector> m_Uh;
-    Array2D<Cvector> m_worldUh;
     Array2D<Cgrid> m_grids;
-    Array2D<Cgrid> m_worldGrids;
     Array1D<minusAndPlusFlux> m_flux;
-    Array2D<CgridFlux> m_gridFlux;
-    Array2D<CgridFlux> m_worldGridFlux;
-    double m_start_time;
 
 public:
     Timer m_timer; // Timer
@@ -117,10 +107,11 @@ public:
     Timer m_fluxSplitTimer;
     Timer m_MPITimer;
 
+public:
     void initializeSolver(std::map<std::string, std::string> option);
     void initializeAve();
-    void outputAve(std::string filename);
-    void outputError(std::string filename);
+    void outputAve(std::string prefix);
+    void outputError(std::string prefix);
     void outputAccuracy(std::string prefix);
     double calculateDeltaT();
 
@@ -130,19 +121,10 @@ public:
     void run(std::map<std::string, std::string> m_option);
     void assembleRHS();
     void assembleSourceTerm();
-    // void getWorldUh();
-    // void worldToProcUh();
+    double useWENO(double uavemm, double uavem, double uave, double uavep, double uavepp, int gp);
 
     TESTCASETYPE m_testcase;
     SCHEMETYPE m_scheme;
-
-    enum RKMETHOD
-    {
-        RK1 = 0,
-        RK2 = 1,
-        RK3 = 2,
-    };
-
     RKMETHOD m_rkMeth;
 
     // void setBoundaryGPs(void);
@@ -156,12 +138,8 @@ public:
     void RunRK3(double deltaT);
 
     void GatherAllUhToRank0();
-
-    double useWENO(double uavemm, double uavem, double uave, double uavep, double uavepp, int gp);
-
-    Array2D<double> m_worldTotalPr, m_totalPr;
-    // void copyConfig();
-    std::map<std::string, std::string> m_option;
+    Array2D<Cgrid> m_worldGrids;
+    Array2D<Cvector> m_worldUh;
 };
 
 ///////////////////////////////////////////////////////////////////////

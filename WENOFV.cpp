@@ -136,19 +136,6 @@ void CWENOFD::initializeSolver(std::map<std::string, std::string> option)
         for (int ej = 0; ej != m_totalPointNumY; ++ej)
             m_rhs[ei][ej].vector.Resize(m_varNum);
 
-    // Resize and initialize flux matrices
-    m_gridFlux.Resize(m_totalPointNumX, m_totalPointNumY);
-    for (int ei = 0; ei < m_totalPointNumX; ++ei)
-    {
-        for (int ej = 0; ej < m_totalPointNumY; ++ej)
-        {
-            m_gridFlux[ei][ej].bottomFlux.Resize(m_varNum);
-            m_gridFlux[ei][ej].topFlux.Resize(m_varNum);
-            m_gridFlux[ei][ej].leftFlux.Resize(m_varNum);
-            m_gridFlux[ei][ej].rightFlux.Resize(m_varNum);
-        }
-    }
-
     if (m_rank == 0)
         std::cout << "Outputing config document..." << std::endl;
 
@@ -191,9 +178,9 @@ void CWENOFD::initializeAve(void)
     if (m_rank == 0)
         std::cout << "Cell averages initialization completed..." << std::endl;
 }
-void CWENOFD::run(std::map<std::string, std::string> m_option)
+void CWENOFD::run(std::map<std::string, std::string> option)
 {
-    initializeSolver(m_option);
+    initializeSolver(option);
 
     // Initialize current time
     m_now = 0;
