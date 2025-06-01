@@ -1,0 +1,21 @@
+\contentsline {section}{\numberline {1}方程与离散格式}{2}{section.1}%
+\contentsline {subsection}{\numberline {1.1}方程介绍}{2}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}特征分析}{2}{subsection.1.2}%
+\contentsline {section}{\numberline {2}有限差分法离散格式}{4}{section.2}%
+\contentsline {subsection}{\numberline {2.1}空间离散}{4}{subsection.2.1}%
+\contentsline {paragraph}{高阶非振荡通量重构}{4}{section*.2}%
+\contentsline {paragraph}{界面捕捉方法——THINC函数}{5}{section*.3}%
+\contentsline {subsection}{\numberline {2.2}时间离散}{5}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}小结}{5}{subsection.2.3}%
+\contentsline {section}{\numberline {3}空间离散格式}{6}{section.3}%
+\contentsline {subsection}{\numberline {3.1}WENO-JS格式}{6}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}WENO-Z格式}{6}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}边界条件}{6}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}边界条件}{8}{subsection.3.4}%
+\contentsline {subsubsection}{\numberline {3.4.1}自由流入边界条件}{8}{subsubsection.3.4.1}%
+\contentsline {subsubsection}{\numberline {3.4.2}自由流出边界条件}{8}{subsubsection.3.4.2}%
+\contentsline {subsubsection}{\numberline {3.4.3}固壁反射边界条件}{9}{subsubsection.3.4.3}%
+\contentsline {section}{\numberline {4}时间离散格式-SSP-RK格式}{9}{section.4}%
+\contentsline {section}{\numberline {5}保正限制器}{10}{section.5}%
+\contentsline {section}{\numberline {6}差分格式总结}{10}{section.6}%
+\contentsline {section}{\numberline {7}算例}{10}{section.7}%

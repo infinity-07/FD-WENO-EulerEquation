@@ -7,11 +7,11 @@
 #include <filesystem>
 #include <iomanip>
 
-CWENOFV::~CWENOFV()
+CWENOFD::~CWENOFD()
 {
 }
 
-void CWENOFV::initializeSolver(std::map<std::string, std::string> option)
+void CWENOFD::initializeSolver(std::map<std::string, std::string> option)
 {
     // Note: Variables containing 'world' refer to the entire computational domain
     m_start_time = MPI_Wtime();
@@ -166,7 +166,7 @@ void CWENOFV::initializeSolver(std::map<std::string, std::string> option)
 
     MPI_Barrier(MPI_COMM_WORLD);
 }
-void CWENOFV::initializeAve(void)
+void CWENOFD::initializeAve(void)
 {
 
     Array1D<double> Conserved_var(m_varNum);
@@ -191,7 +191,7 @@ void CWENOFV::initializeAve(void)
     if (m_rank == 0)
         std::cout << "Cell averages initialization completed..." << std::endl;
 }
-void CWENOFV::run(std::map<std::string, std::string> m_option)
+void CWENOFD::run(std::map<std::string, std::string> m_option)
 {
     initializeSolver(m_option);
 
@@ -278,7 +278,7 @@ void CWENOFV::run(std::map<std::string, std::string> m_option)
         m_solverTimer.printHierarchy();
 }
 
-void CWENOFV::RunRK1(double deltaT)
+void CWENOFD::RunRK1(double deltaT)
 {
     // Assemble the right-hand side (RHS) for the equations
     assembleRHS();
@@ -289,7 +289,7 @@ void CWENOFV::RunRK1(double deltaT)
             for (int r = 0; r < m_varNum; r++)
                 m_Uh[ei][ej].vector[r] += deltaT * m_rhs[ei][ej].vector[r];
 }
-void CWENOFV::RunRK2(double deltaT)
+void CWENOFD::RunRK2(double deltaT)
 {
     // Copy current solution to temporary storage
     for (int ei = m_startPointX; ei != m_endPointX; ei++)
@@ -330,7 +330,7 @@ void CWENOFV::RunRK2(double deltaT)
                     m_Uh[ei][ej].vector[r] = a * m_Un[ei][ej].vector[r] + b * m_Uh[ei][ej].vector[r] + c * deltaT * m_rhs[ei][ej].vector[r];
     }
 }
-void CWENOFV::RunRK3(double deltaT)
+void CWENOFD::RunRK3(double deltaT)
 {
     // Copy current solution to temporary storage
     for (int ei = m_startPointX; ei != m_endPointX; ei++)
@@ -377,7 +377,7 @@ void CWENOFV::RunRK3(double deltaT)
     }
 }
 
-double CWENOFV::calculateDeltaT()
+double CWENOFD::calculateDeltaT()
 {
     // Initialize timestep to a large value
     double timestep(1.0);
@@ -434,7 +434,7 @@ double CWENOFV::calculateDeltaT()
     return globalTimestep;
 }
 
-void CWENOFV::assembleRHS(void)
+void CWENOFD::assembleRHS(void)
 {
     for (int ei = m_startPointX; ei != m_endPointX; ei++)
         for (int ej = m_startPointY; ej != m_endPointY; ej++)
@@ -447,7 +447,7 @@ void CWENOFV::assembleRHS(void)
     // Assemble source term for specific test cases
     assembleSourceTerm();
 }
-void CWENOFV::fluxSplit(Array1D<double> uh, double nx, double ny, Array1D<double> &flux_minus, Array1D<double> &flux_plus)
+void CWENOFD::fluxSplit(Array1D<double> uh, double nx, double ny, Array1D<double> &flux_minus, Array1D<double> &flux_plus)
 {
     // Split the flux into positive and negative parts
     Array1D<double> F(m_varNum);
@@ -462,7 +462,7 @@ void CWENOFV::fluxSplit(Array1D<double> uh, double nx, double ny, Array1D<double
     }
 }
 
-void CWENOFV::getFlux(void)
+void CWENOFD::getFlux(void)
 {
     m_mainTimer.pause();
     m_MPITimer.start();
@@ -645,7 +645,7 @@ void CWENOFV::getFlux(void)
     }
 }
 
-void CWENOFV::assembleSourceTerm(void)
+void CWENOFD::assembleSourceTerm(void)
 {
     Array1D<double> Uh(m_varNum);
     double g_g0;
@@ -666,7 +666,7 @@ void CWENOFV::assembleSourceTerm(void)
         break;
     }
 }
-double CWENOFV::useWENO(double uavemm, double uavem, double uave, double uavep, double uavepp, int gp)
+double CWENOFD::useWENO(double uavemm, double uavem, double uave, double uavep, double uavepp, int gp)
 {
     double u_hat(0);
     switch (m_scheme)
@@ -677,6 +677,12 @@ double CWENOFV::useWENO(double uavemm, double uavem, double uave, double uavep, 
     case WENOZ:
         u_hat = WENO5Zthreconstruction(uavemm, uavem, uave, uavep, uavepp, gp);
         break;
+    case WENOZP:
+        u_hat = WENO5ZPtheconstruction(uavemm, uavem, uave, uavep, uavepp, gp, m_deltaX);
+        break;
+    case WENOZPI:
+        u_hat = WENO5ZPItheconstruction(uavemm, uavem, uave, uavep, uavepp, gp);
+        break;
     default:
         std::cout << "the scheme is not supported" << std::endl;
         std::cin.get();
@@ -686,7 +692,7 @@ double CWENOFV::useWENO(double uavemm, double uavem, double uave, double uavep, 
     return u_hat;
 }
 
-void CWENOFV::MPICommunication(void)
+void CWENOFD::MPICommunication(void)
 {
     MPI_Barrier(MPI_COMM_WORLD);
     int MLENGTH = m_varNum * m_ghostCellNum * m_numPointsY;
@@ -763,7 +769,7 @@ void CWENOFV::MPICommunication(void)
 
     MPI_Barrier(MPI_COMM_WORLD);
 }
-void CWENOFV::GatherAllUhToRank0()
+void CWENOFD::GatherAllUhToRank0()
 {
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -844,7 +850,7 @@ void CWENOFV::GatherAllUhToRank0()
 
     MPI_Barrier(MPI_COMM_WORLD);
 }
-void CWENOFV::setBoundary(void)
+void CWENOFD::setBoundary(void)
 {
     // 给 world 计算区域的 ghost cell 赋值 （使用边界条件）
 
@@ -1006,7 +1012,7 @@ void CWENOFV::setBoundary(void)
     }
 }
 
-void CWENOFV::outputAve(std::string prefix)
+void CWENOFD::outputAve(std::string prefix)
 {
     m_MPITimer.start();
     MPICommunication();
@@ -1081,7 +1087,7 @@ void CWENOFV::outputAve(std::string prefix)
 
     MPI_Barrier(MPI_COMM_WORLD);
 }
-void CWENOFV::outputError(std::string prefix)
+void CWENOFD::outputError(std::string prefix)
 {
     m_MPITimer.start();
     MPICommunication();
@@ -1158,24 +1164,24 @@ inline void matVecMul4(Array2D<double> matrix, Array1D<double> vec, Array1D<doub
     result[3] = matrix[3][0] * vec[0] + matrix[3][1] * vec[1] + matrix[3][2] * vec[2] + matrix[3][3] * vec[3];
 }
 
-void CWENOFV::copyConfig()
-{
-    // Input file path and name
-    std::filesystem::path inputFileName = "./input/config.cfg";
-    // Output file path and name
-    std::filesystem::path outputFileName = "./output/config_copy.cfg";
-    try
-    {
-        // Use std::filesystem::copy to copy the file
-        std::filesystem::copy(inputFileName, outputFileName, std::filesystem::copy_options::overwrite_existing);
-        std::cout << "File copied successfully." << std::endl;
-    }
-    catch (const std::filesystem::filesystem_error &e)
-    {
-        std::cerr << "Error: " << e.what() << std::endl;
-    }
-}
-void CWENOFV::outputAccuracy(std::string prefix)
+// void CWENOFD::copyConfig()
+// {
+//     // Input file path and name
+//     std::filesystem::path inputFileName = "./input/config.cfg";
+//     // Output file path and name
+//     std::filesystem::path outputFileName = "./output/config_copy.cfg";
+//     try
+//     {
+//         // Use std::filesystem::copy to copy the file
+//         std::filesystem::copy(inputFileName, outputFileName, std::filesystem::copy_options::overwrite_existing);
+//         std::cout << "File copied successfully." << std::endl;
+//     }
+//     catch (const std::filesystem::filesystem_error &e)
+//     {
+//         std::cerr << "Error: " << e.what() << std::endl;
+//     }
+// }
+void CWENOFD::outputAccuracy(std::string prefix)
 {
     if (m_rank == 0)
         std::cout << "Verifying accuracy..." << std::endl;

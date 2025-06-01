@@ -11,6 +11,8 @@ enum SCHEMETYPE
 {
 	WENO = 0,
 	WENOZ = 1,
+	WENOZP = 2,
+	WENOZPI = 3
 };
 enum TESTCASETYPE
 {

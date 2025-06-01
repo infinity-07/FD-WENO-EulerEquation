@@ -51,13 +51,13 @@ public:
     Array1D<double> flux_plus;
 };
 
-class CWENOFV
+class CWENOFD
 {
 public:
-    CWENOFV() {}
-    ~CWENOFV();
+    CWENOFD() {}
+    ~CWENOFD();
 
-    CWENOFV(EulerEquation *equation)
+    CWENOFD(EulerEquation *equation)
     {
         this->equation = equation;
     }

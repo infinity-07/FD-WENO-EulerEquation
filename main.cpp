@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     config.read(option);
 
     // ------------ Pass Equation and Initial Boundary Conditions to Solver -------------- //
-    CWENOFV solver(equation);
+    CWENOFD solver(equation);
 
     solver.run(option);
 

@@ -77,8 +77,6 @@ public:
             // 将键值对添加到配置map中
             option[key] = value;
         }
-
-        std::cout << "Calling CConfig::read" << std::endl;
     }
 
     void output(std::map<std::string, std::string> option)
