@@ -78,17 +78,12 @@ public:
     int m_worldEndPointX, m_worldEndPointY;
     int m_varNum;
 
-    double m_globalXL;
-    double m_globalXR;
-    double m_globalYL;
-    double m_globalYR;
+    double m_globalXL, m_globalXR, m_globalYL, m_globalYR;
+    double m_deltaX, m_deltaY;
 
-    double m_cfl;
-    double m_deltaX;
-    double m_deltaY;
     double m_outputTime;
-    double m_restartTime;
     double m_now;
+    double m_cfl;
     double m_start_time;
 
 public:
