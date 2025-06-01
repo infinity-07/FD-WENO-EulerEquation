@@ -428,7 +428,7 @@ void CWENOFD::assembleRHS(void)
             m_rhs[ei][ej].vector.setZero();
 
     // Calculate numerical fluxes using WENO scheme
-    getFlux();
+    assembleBoundaryTerm();
 
     // Assemble source term for specific test cases
     assembleSourceTerm();
@@ -448,7 +448,7 @@ void CWENOFD::fluxSplit(Array1D<double> uh, double nx, double ny, Array1D<double
     }
 }
 
-void CWENOFD::getFlux(void)
+void CWENOFD::assembleBoundaryTerm(void)
 {
     m_mainTimer.pause();
     m_MPITimer.start();

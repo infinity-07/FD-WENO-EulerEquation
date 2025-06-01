@@ -44,8 +44,7 @@ public:
 class minusAndPlusFlux
 {
 public:
-    Array1D<double> flux_minus;
-    Array1D<double> flux_plus;
+    Array1D<double> flux_minus, flux_plus;
 };
 
 class CWENOFD
@@ -60,23 +59,20 @@ public:
     }
 
     EulerEquation *equation;
+    int m_varNum;
 
 public:
     int m_procIndexX;
     int m_rank, m_size;
-    int m_worldPointNumX, m_worldPointNumY;
 
+    int m_worldPointNumX, m_worldPointNumY;
     int m_ghostCellNum;
     int m_startPointX, m_endPointX;
     int m_startPointY, m_endPointY;
-
     int m_numPointsX, m_numPointsY;
-
     int m_totalPointNumX, m_totalPointNumY;
-
     int m_worldStartPointX, m_worldStartPointY;
     int m_worldEndPointX, m_worldEndPointY;
-    int m_varNum;
 
     double m_globalXL, m_globalXR, m_globalYL, m_globalYR;
     double m_deltaX, m_deltaY;
@@ -86,7 +82,13 @@ public:
     double m_cfl;
     double m_start_time;
 
+    TESTCASETYPE m_testcase;
+    SCHEMETYPE m_scheme;
+    RKMETHOD m_rkMeth;
+
 public:
+    Array2D<Cvector> m_rhs;
+    Array2D<Cvector> m_Un;
     Array2D<Cvector> m_Uh;
     Array2D<Cgrid> m_grids;
     Array1D<minusAndPlusFlux> m_flux;
@@ -103,35 +105,33 @@ public:
     Timer m_MPITimer;
 
 public:
+    void run(std::map<std::string, std::string> m_option);
+
     void initializeSolver(std::map<std::string, std::string> option);
     void initializeAve();
+
+    void assembleRHS();
+    void assembleSourceTerm();
+    void assembleBoundaryTerm();
+
+    double calculateDeltaT();
+
+    double useWENO(double uavemm, double uavem, double uave, double uavep, double uavepp, int gp);
+    void fluxSplit(Array1D<double> uh, double nx, double ny, Array1D<double> &flux_minus, Array1D<double> &flux_plus);
+
     void outputAve(std::string prefix);
     void outputError(std::string prefix);
     void outputAccuracy(std::string prefix);
-    double calculateDeltaT();
 
-    void fluxSplit(Array1D<double> uh, double nx, double ny, Array1D<double> &flux_minus, Array1D<double> &flux_plus);
-
-    void getFlux();
-    void run(std::map<std::string, std::string> m_option);
-    void assembleRHS();
-    void assembleSourceTerm();
-    double useWENO(double uavemm, double uavem, double uave, double uavep, double uavepp, int gp);
-
-    TESTCASETYPE m_testcase;
-    SCHEMETYPE m_scheme;
-    RKMETHOD m_rkMeth;
-
-    // void setBoundaryGPs(void);
     void setBoundary(void);
     void exchangeGhostCellsValue(void);
 
-    Array2D<Cvector> m_rhs;
-    Array2D<Cvector> m_Un;
+public:
     void RunRK1(double deltaT);
     void RunRK2(double deltaT);
     void RunRK3(double deltaT);
 
+public:
     void GatherAllUhToRank0();
     Array2D<Cgrid> m_worldGrids;
     Array2D<Cvector> m_worldUh;
