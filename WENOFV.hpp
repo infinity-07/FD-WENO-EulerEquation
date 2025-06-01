@@ -147,7 +147,7 @@ public:
 
     // void setBoundaryGPs(void);
     void setBoundary(void);
-    void MPICommunication(void);
+    void exchangeGhostCellsValue(void);
 
     Array2D<Cvector> m_rhs;
     Array2D<Cvector> m_Un;

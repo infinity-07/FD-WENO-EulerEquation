@@ -71,11 +71,11 @@ void CWENOFD::initializeSolver(std::map<std::string, std::string> option)
     m_deltaX = (equation->xR - equation->xL) / (m_worldPointNumX - 1); // Structured grid
     m_deltaY = (equation->yR - equation->yL) / (m_worldPointNumY - 1); // Structured grid
 
-    double procXLeft = equation->xL + m_procIndexX * basePointNumX * m_deltaX;
-    double procYLeft = equation->yL;
+    const double procXLeft = equation->xL + m_procIndexX * basePointNumX * m_deltaX;
+    const double procYLeft = equation->yL;
 
-    double procGhostXLeft = procXLeft - m_deltaX * m_ghostCellNum;
-    double procGhostYLeft = procYLeft - m_deltaY * m_ghostCellNum;
+    const double procGhostXLeft = procXLeft - m_deltaX * m_ghostCellNum;
+    const double procGhostYLeft = procYLeft - m_deltaY * m_ghostCellNum;
 
     // if (m_rank == 0)
     //     std::cout << "Generating grid..." << std::endl;
@@ -441,7 +441,6 @@ void CWENOFD::assembleRHS(void)
             m_rhs[ei][ej].vector.setZero();
 
     // Calculate numerical fluxes using WENO scheme
-
     getFlux();
 
     // Assemble source term for specific test cases
@@ -453,7 +452,7 @@ void CWENOFD::fluxSplit(Array1D<double> uh, double nx, double ny, Array1D<double
     Array1D<double> F(m_varNum);
     equation->getPhyFlux(uh, F, nx, ny);
 
-    double ws = equation->getMaxEigenValue(uh, nx, ny);
+    const double ws = equation->getMaxEigenValue(uh, nx, ny);
 
     for (int r = 0; r != m_varNum; ++r)
     {
@@ -466,7 +465,7 @@ void CWENOFD::getFlux(void)
 {
     m_mainTimer.pause();
     m_MPITimer.start();
-    MPICommunication();
+    exchangeGhostCellsValue();
     m_MPITimer.pause();
     m_mainTimer.start();
 
@@ -648,11 +647,11 @@ void CWENOFD::getFlux(void)
 void CWENOFD::assembleSourceTerm(void)
 {
     Array1D<double> Uh(m_varNum);
-    double g_g0;
     switch (m_testcase)
     {
     case RTI:
-        g_g0 = 1.0;
+    {
+        const double g_g0 = 1.0;
         for (int ei = m_startPointX; ei != m_endPointX; ei++)
         {
             for (int ej = m_startPointY; ej != m_endPointY; ej++)
@@ -662,6 +661,7 @@ void CWENOFD::assembleSourceTerm(void)
             }
         }
         break;
+    }
     default:
         break;
     }
@@ -692,10 +692,11 @@ double CWENOFD::useWENO(double uavemm, double uavem, double uave, double uavep, 
     return u_hat;
 }
 
-void CWENOFD::MPICommunication(void)
+void CWENOFD::exchangeGhostCellsValue(void)
 {
+    // 沿X方向与相邻进程交换ghost单元数据，用于后续WENO计算
     MPI_Barrier(MPI_COMM_WORLD);
-    int MLENGTH = m_varNum * m_ghostCellNum * m_numPointsY;
+    const int MLENGTH = m_varNum * m_ghostCellNum * m_numPointsY;
     std::vector<double> sendBufLeft(MLENGTH), sendBufRight(MLENGTH);
     std::vector<double> recvBufLeft(MLENGTH), recvBufRight(MLENGTH);
 
@@ -771,6 +772,7 @@ void CWENOFD::MPICommunication(void)
 }
 void CWENOFD::GatherAllUhToRank0()
 {
+    // 收集所有线程的数据到线程0，用于输出
     MPI_Barrier(MPI_COMM_WORLD);
 
     // Step 1: 收集所有线程的 m_numPointsX 到线程0
@@ -852,7 +854,7 @@ void CWENOFD::GatherAllUhToRank0()
 }
 void CWENOFD::setBoundary(void)
 {
-    // 给 world 计算区域的 ghost cell 赋值 （使用边界条件）
+    // 给整个计算区域的 ghost cell 赋值 （使用边界条件）
 
     // y 方向
     for (int ei = 0; ei != m_totalPointNumX; ei++)
@@ -863,7 +865,7 @@ void CWENOFD::setBoundary(void)
             {
             case PERIOD:
             {
-                int e1 = e + 1;
+                const int e1 = e + 1;
                 for (int r = 0; r != m_varNum; ++r)
                 {
                     m_Uh[ei][m_startPointY - e1].vector[r] = m_Uh[ei][m_endPointY - 1 - e1].vector[r]; // bottom
@@ -873,7 +875,7 @@ void CWENOFD::setBoundary(void)
             }
             case symmetric:
             {
-                int e1 = e + 1;
+                const int e1 = e + 1;
                 for (int r = 0; r != m_varNum; ++r)
                 {
                     m_Uh[ei][m_startPointY - e1].vector[r] = m_Uh[ei][m_startPointY + e1].vector[r];     // bottom
@@ -883,7 +885,7 @@ void CWENOFD::setBoundary(void)
             }
             case slip:
             {
-                int e1 = e + 1;
+                const int e1 = e + 1;
                 for (int r = 0; r != m_varNum; ++r)
                 {
                     m_Uh[ei][m_startPointY - e1].vector[r] = m_Uh[ei][m_startPointY + e1].vector[r];     // bottom
@@ -897,7 +899,7 @@ void CWENOFD::setBoundary(void)
             }
             case special:
             {
-                int e1 = e + 1;
+                const int e1 = e + 1;
 
                 Array1D<double> loc_Uh(m_varNum);
                 equation->getU0(m_grids[ei][m_startPointY].m_xCenter, m_grids[ei][m_startPointY].m_yCenter, loc_Uh); // bottom
@@ -927,7 +929,7 @@ void CWENOFD::setBoundary(void)
             case symmetric:
                 for (int e = 0; e != m_ghostCellNum; ++e)
                 {
-                    int e1 = e + 1;
+                    const int e1 = e + 1;
                     for (int r = 0; r != m_varNum; ++r)
                         m_Uh[m_startPointX - e1][ej].vector[r] = m_Uh[m_startPointX + e1][ej].vector[r];
                 }
@@ -936,7 +938,7 @@ void CWENOFD::setBoundary(void)
             case slip:
                 for (int e = 0; e != m_ghostCellNum; ++e)
                 {
-                    int e1 = e + 1;
+                    const int e1 = e + 1;
                     for (int r = 0; r != m_varNum; ++r)
                         m_Uh[m_startPointX - e1][ej].vector[r] = m_Uh[m_startPointX + e1][ej].vector[r];
 
@@ -946,7 +948,7 @@ void CWENOFD::setBoundary(void)
             case special:
                 for (int e = 0; e != m_ghostCellNum; ++e)
                 {
-                    int e1 = e + 1;
+                    const int e1 = e + 1;
                     for (int r = 0; r != m_varNum; ++r)
                     {
                         Array1D<double> loc_Uh(m_varNum);
@@ -956,6 +958,7 @@ void CWENOFD::setBoundary(void)
                 }
                 break;
             case PERIOD:
+                //  在 exchangeGhostCellsValue 函数里已经顺手处理过了
                 break;
             default:
                 std::cout << "Error: Invalid boundary condition for x direction" << std::endl;
@@ -973,7 +976,7 @@ void CWENOFD::setBoundary(void)
             case symmetric:
                 for (int e = 0; e != m_ghostCellNum; ++e)
                 {
-                    int e1 = e + 1;
+                    const int e1 = e + 1;
                     for (int r = 0; r != m_varNum; ++r)
                         m_Uh[m_endPointX - 1 + e1][ej].vector[r] = m_Uh[m_endPointX - 1 - e1][ej].vector[r];
                 }
@@ -981,7 +984,7 @@ void CWENOFD::setBoundary(void)
             case slip:
                 for (int e = 0; e != m_ghostCellNum; ++e)
                 {
-                    int e1 = e + 1;
+                    const int e1 = e + 1;
                     for (int r = 0; r != m_varNum; ++r)
                         m_Uh[m_endPointX - 1 + e1][ej].vector[r] = m_Uh[m_endPointX - 1 - e1][ej].vector[r];
 
@@ -992,7 +995,7 @@ void CWENOFD::setBoundary(void)
             case special:
                 for (int e = 0; e != m_ghostCellNum; ++e)
                 {
-                    int e1 = e + 1;
+                    const int e1 = e + 1;
                     for (int r = 0; r != m_varNum; ++r)
                     {
                         Array1D<double> loc_Uh(m_varNum);
@@ -1003,6 +1006,7 @@ void CWENOFD::setBoundary(void)
                 }
                 break;
             case PERIOD:
+                //  在 exchangeGhostCellsValue 函数里已经顺手处理过了
                 break;
             default:
                 std::cout << "Error: Invalid boundary condition for x direction" << std::endl;
@@ -1014,8 +1018,9 @@ void CWENOFD::setBoundary(void)
 
 void CWENOFD::outputAve(std::string prefix)
 {
+    // 收集数据到线程0，使用线程0输出数据到 plt 文件里
     m_MPITimer.start();
-    MPICommunication();
+    exchangeGhostCellsValue();
     m_MPITimer.pause();
 
     setBoundary();
@@ -1090,7 +1095,7 @@ void CWENOFD::outputAve(std::string prefix)
 void CWENOFD::outputError(std::string prefix)
 {
     m_MPITimer.start();
-    MPICommunication();
+    exchangeGhostCellsValue();
     m_MPITimer.pause();
 
     GatherAllUhToRank0();
@@ -1154,14 +1159,6 @@ void CWENOFD::outputError(std::string prefix)
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-}
-
-inline void matVecMul4(Array2D<double> matrix, Array1D<double> vec, Array1D<double> &result)
-{
-    result[0] = matrix[0][0] * vec[0] + matrix[0][1] * vec[1] + matrix[0][2] * vec[2] + matrix[0][3] * vec[3];
-    result[1] = matrix[1][0] * vec[0] + matrix[1][1] * vec[1] + matrix[1][2] * vec[2] + matrix[1][3] * vec[3];
-    result[2] = matrix[2][0] * vec[0] + matrix[2][1] * vec[1] + matrix[2][2] * vec[2] + matrix[2][3] * vec[3];
-    result[3] = matrix[3][0] * vec[0] + matrix[3][1] * vec[1] + matrix[3][2] * vec[2] + matrix[3][3] * vec[3];
 }
 
 // void CWENOFD::copyConfig()
