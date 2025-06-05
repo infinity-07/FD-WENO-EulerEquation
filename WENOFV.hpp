@@ -14,36 +14,18 @@ enum RKMETHOD
     RK3 = 2,
 };
 
-class Cgrid
+struct Cgrid
 {
-public:
-    // 成员变量
-    double m_xCenter;
-    double m_yCenter;
-
-    // 默认构造函数
-    Cgrid()
-        : m_xCenter(0), m_yCenter(0)
-    {
-    }
-
-    // 带参数的构造函数
-    Cgrid(double xCenter, double yCenter)
-        : m_xCenter(xCenter), m_yCenter(yCenter)
-    {
-    }
+    double m_xCenter, m_yCenter;
 };
 
-class Cvector
+struct Cvector
 {
-public:
-    // 成员变量
     Array1D<double> vector;
 };
 
-class minusAndPlusFlux
+struct minusAndPlusFlux
 {
-public:
     Array1D<double> flux_minus, flux_plus;
 };
 

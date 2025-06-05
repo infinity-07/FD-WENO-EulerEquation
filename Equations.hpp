@@ -16,18 +16,17 @@ enum SCHEMETYPE
 };
 enum TESTCASETYPE
 {
-	SMOOTH = 0,
-	Riemann1 = 1,
-	Riemann2 = 2,
-	RTI = 3
+	SMOOTH = 0,	  // 光滑算例
+	Riemann1 = 1, // 黎曼算例1
+	Riemann2 = 2, // 黎曼算例2
+	RTI = 3		  // 瑞丽泰勒不稳定算例
 };
 enum BOUNDARYTYPE
 {
-	PERIOD = 0, // 周期边界条件
-	slip = 1,	//
-	DIRICHLET = 2,
-	special = 3,  // 流入边界条件
-	symmetric = 4 // 流出边界条件
+	PERIOD = 0,	  // 周期边界条件
+	SLIP = 1,	  // 无滑移边界条件
+	SPECIAL = 2,  // 流入边界条件
+	SYMMETRIC = 3 // 流出边界条件
 };
 
 // 方程
@@ -293,7 +292,12 @@ public:
 
 		// conservative variable
 		for (int r = 0; r != varNum; ++r)
-			Flux[r] = 0.5 * (FUL[r] + FUR[r] - ws * (UR[r] - UL[r]));
+		{
+			Flux[0] = 0.5 * (FUL[0] + FUR[0] - ws * (UR[0] - UL[0]));
+			Flux[1] = 0.5 * (FUL[1] + FUR[1] - ws * (UR[1] - UL[1]));
+			Flux[2] = 0.5 * (FUL[2] + FUR[2] - ws * (UR[2] - UL[2]));
+			Flux[3] = 0.5 * (FUL[3] + FUR[3] - ws * (UR[3] - UL[3]));
+		}
 	}
 
 	inline void getLLFRiemannFluxX(const Array1D<double> &UL, const Array1D<double> &UR, Array1D<double> &Flux)
@@ -310,7 +314,12 @@ public:
 
 		// conservative variable
 		for (int r = 0; r != varNum; ++r)
-			Flux[r] = 0.5 * (FUL[r] + FUR[r] - ws * (UR[r] - UL[r]));
+		{
+			Flux[0] = 0.5 * (FUL[0] + FUR[0] - ws * (UR[0] - UL[0]));
+			Flux[1] = 0.5 * (FUL[1] + FUR[1] - ws * (UR[1] - UL[1]));
+			Flux[2] = 0.5 * (FUL[2] + FUR[2] - ws * (UR[2] - UL[2]));
+			Flux[3] = 0.5 * (FUL[3] + FUR[3] - ws * (UR[3] - UL[3]));
+		}
 	}
 
 	inline void getLLFRiemannFluxY(const Array1D<double> &UL, const Array1D<double> &UR, Array1D<double> &Flux)
@@ -327,7 +336,12 @@ public:
 
 		// conservative variable
 		for (int r = 0; r != varNum; ++r)
-			Flux[r] = 0.5 * (FUL[r] + FUR[r] - ws * (UR[r] - UL[r]));
+		{
+			Flux[0] = 0.5 * (FUL[0] + FUR[0] - ws * (UR[0] - UL[0]));
+			Flux[1] = 0.5 * (FUL[1] + FUR[1] - ws * (UR[1] - UL[1]));
+			Flux[2] = 0.5 * (FUL[2] + FUR[2] - ws * (UR[2] - UL[2]));
+			Flux[3] = 0.5 * (FUL[3] + FUR[3] - ws * (UR[3] - UL[3]));
+		}
 	}
 
 	// -------- (2) 方程的初边值条件与参数设置 ----------- //
@@ -354,26 +368,26 @@ public:
 			bottomBoundaryCondition = PERIOD;
 			euler_gamma = 1.4;
 
-			rho0 = [this](double xP, double yP)
+			rho0 = [this](const double xP, const double yP)
 			{
 				return 1 + 0.2 * sin(M_PI * (xP + yP));
 			};
-			u0 = [this](double x, double y)
+			u0 = [this](const double x, const double y)
 			{
 				return 0.7;
 			};
-			v0 = [this](double x, double y)
+			v0 = [this](const double x, const double y)
 			{
 				return 0.3;
 			};
-			pre0 = [this](double x, double y)
+			pre0 = [this](const double x, const double y)
 			{
 				return 1;
 			};
 
 			// 函数解析解
 			this->u_exact_exist = true;
-			this->theVarExact = [](double x, double y, double t)
+			this->theVarExact = [](const double x, const double y, const double t)
 			{ return 1 + 0.2 * sin(M_PI * (x + y - t)); };
 			this->theVarUh = [](Array1D<double> Uh)
 			{ return Uh[0]; };
@@ -387,10 +401,10 @@ public:
 			yL = 0.0;
 			yR = 2.0;
 			outputtime = 0.52;
-			leftBoundaryCondition = symmetric;
-			rightBoundaryCondition = symmetric;
-			topBoundaryCondition = symmetric;
-			bottomBoundaryCondition = symmetric;
+			leftBoundaryCondition = SYMMETRIC;
+			rightBoundaryCondition = SYMMETRIC;
+			topBoundaryCondition = SYMMETRIC;
+			bottomBoundaryCondition = SYMMETRIC;
 			euler_gamma = 1.4;
 
 			rho0 = [this](const double xP, const double yP)
@@ -452,9 +466,9 @@ public:
 
 			// 函数解析解
 			this->u_exact_exist = false;
-			this->theVarExact = [](double x, double y, double t)
+			this->theVarExact = [](const double x, const double y, const double t)
 			{ return 0.0; };
-			this->theVarUh = [](Array1D<double> Uh)
+			this->theVarUh = [](const Array1D<double> &Uh)
 			{ return Uh[0]; };
 			break;
 		case Riemann2:
@@ -466,13 +480,13 @@ public:
 			yL = 0.0;
 			yR = 1.0;
 			outputtime = 0.8;
-			leftBoundaryCondition = symmetric;
-			rightBoundaryCondition = symmetric;
-			topBoundaryCondition = symmetric;
-			bottomBoundaryCondition = symmetric;
+			leftBoundaryCondition = SYMMETRIC;
+			rightBoundaryCondition = SYMMETRIC;
+			topBoundaryCondition = SYMMETRIC;
+			bottomBoundaryCondition = SYMMETRIC;
 			euler_gamma = 1.4;
 
-			rho0 = [this](double xP, double yP)
+			rho0 = [this](const double xP, const double yP)
 			{
 				if (xP < 0.8 && yP < 0.8)
 					return 0.138;
@@ -486,7 +500,7 @@ public:
 				std::cout << "initial value error!" << std::endl;
 				return 0.0;
 			};
-			u0 = [this](double xP, double yP)
+			u0 = [this](const double xP, const double yP)
 			{
 				if (xP < 0.8 && yP < 0.8)
 					return 1.206;
@@ -500,7 +514,7 @@ public:
 				std::cout << "initial value error!" << std::endl;
 				return 0.0;
 			};
-			v0 = [this](double xP, double yP)
+			v0 = [this](const double xP, const double yP)
 			{
 				if (xP < 0.8 && yP < 0.8)
 					return 1.206;
@@ -514,7 +528,7 @@ public:
 				std::cout << "initial value error!" << std::endl;
 				return 0.0;
 			};
-			pre0 = [this](double xP, double yP)
+			pre0 = [this](const double xP, const double yP)
 			{
 				if (xP < 0.8 && yP < 0.8)
 					return 0.029;
@@ -531,9 +545,9 @@ public:
 
 			// 函数解析解
 			this->u_exact_exist = false;
-			this->theVarExact = [](double x, double y, double t)
+			this->theVarExact = [](const double x, const double y, const double t)
 			{ return 0.0; };
-			this->theVarUh = [](Array1D<double> Uh)
+			this->theVarUh = [](const Array1D<double> &Uh)
 			{ return Uh[0]; };
 			break;
 		case RTI:
@@ -545,33 +559,32 @@ public:
 			yL = 0.0;
 			yR = 1.0;
 			outputtime = 1.95;
-			leftBoundaryCondition = slip;
-			rightBoundaryCondition = slip;
-			topBoundaryCondition = special;
-			bottomBoundaryCondition = special;
+			leftBoundaryCondition = SLIP;
+			rightBoundaryCondition = SLIP;
+			topBoundaryCondition = SPECIAL;
+			bottomBoundaryCondition = SPECIAL;
 			euler_gamma = 5.0 / 3.0;
 
-			rho0 = [this](double x, double y)
+			rho0 = [this](const double x, const double y)
 			{
 				if (y <= 0.5)
 					return 2.0;
 				else
 					return 1.0;
 			};
-			u0 = [this](double x, double y)
+			u0 = [this](const double x, const double y)
 			{
 				return 0;
 			};
-			v0 = [this](double x, double y)
+			v0 = [this](const double x, const double y)
 			{
-				double pre = pre0(x, y);
-				double rho = rho0(x, y);
-
-				double c = sqrt(euler_gamma * pre / rho);
+				const double pre = pre0(x, y);
+				const double rho = rho0(x, y);
+				const double c = sqrt(euler_gamma * pre / rho);
 
 				return -0.025 * c * cos(8 * M_PI * x);
 			};
-			pre0 = [this](double x, double y)
+			pre0 = [this](const double x, const double y)
 			{
 				if (y <= 0.5)
 					return 1 + 2 * y;
@@ -587,12 +600,11 @@ public:
 	// (2-3) 将物理变量转换成双曲型方程 Ut+f(U)x = 0 的 U
 	inline void getU0(const double xP, const double yP, Array1D<double> &U)
 	{
-		double rho = rho0(xP, yP);
-		double u = u0(xP, yP);
-		double v = v0(xP, yP);
-		double pre = pre0(xP, yP);
-
-		double E = pre / (euler_gamma - 1.0) + 0.5 * rho * (u * u + v * v);
+		const double rho = rho0(xP, yP);
+		const double u = u0(xP, yP);
+		const double v = v0(xP, yP);
+		const double pre = pre0(xP, yP);
+		const double E = pre / (euler_gamma - 1.0) + 0.5 * rho * (u * u + v * v);
 
 		// Flux
 		U[0] = rho;

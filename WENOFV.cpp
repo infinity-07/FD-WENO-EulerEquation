@@ -90,7 +90,8 @@ void CWENOFD::initializeSolver(std::map<std::string, std::string> option)
             loc_xCenter = procGhostXLeft + ei * m_deltaX;
             loc_yCenter = procGhostYLeft + ej * m_deltaY;
 
-            m_grids[ei][ej] = Cgrid(loc_xCenter, loc_yCenter);
+            m_grids[ei][ej].m_xCenter = loc_xCenter;
+            m_grids[ei][ej].m_yCenter = loc_yCenter;
         }
     }
 
@@ -104,7 +105,8 @@ void CWENOFD::initializeSolver(std::map<std::string, std::string> option)
                 loc_xCenter = equation->xL - m_ghostCellNum * m_deltaX + ei * m_deltaX;
                 loc_yCenter = equation->yL - m_ghostCellNum * m_deltaY + ej * m_deltaY;
 
-                m_worldGrids[ei][ej] = Cgrid(loc_xCenter, loc_yCenter);
+                m_worldGrids[ei][ej].m_xCenter = loc_xCenter;
+                m_worldGrids[ei][ej].m_yCenter = loc_yCenter;
             }
         }
     }
@@ -863,7 +865,7 @@ void CWENOFD::setBoundary(void)
                 }
                 break;
             }
-            case symmetric:
+            case SYMMETRIC:
             {
                 const int e1 = e + 1;
                 for (int r = 0; r != m_varNum; ++r)
@@ -873,7 +875,7 @@ void CWENOFD::setBoundary(void)
                 }
                 break;
             }
-            case slip:
+            case SLIP:
             {
                 const int e1 = e + 1;
                 for (int r = 0; r != m_varNum; ++r)
@@ -887,7 +889,7 @@ void CWENOFD::setBoundary(void)
 
                 break;
             }
-            case special:
+            case SPECIAL:
             {
                 const int e1 = e + 1;
 
@@ -916,7 +918,7 @@ void CWENOFD::setBoundary(void)
         {
             switch (equation->leftBoundaryCondition)
             {
-            case symmetric:
+            case SYMMETRIC:
                 for (int e = 0; e != m_ghostCellNum; ++e)
                 {
                     const int e1 = e + 1;
@@ -925,7 +927,7 @@ void CWENOFD::setBoundary(void)
                 }
                 break;
 
-            case slip:
+            case SLIP:
                 for (int e = 0; e != m_ghostCellNum; ++e)
                 {
                     const int e1 = e + 1;
@@ -935,7 +937,7 @@ void CWENOFD::setBoundary(void)
                     m_Uh[m_startPointX - e1][ej].vector[1] *= -1; // x direction | left
                 }
                 break;
-            case special:
+            case SPECIAL:
                 for (int e = 0; e != m_ghostCellNum; ++e)
                 {
                     const int e1 = e + 1;
@@ -963,7 +965,7 @@ void CWENOFD::setBoundary(void)
         {
             switch (equation->rightBoundaryCondition)
             {
-            case symmetric:
+            case SYMMETRIC:
                 for (int e = 0; e != m_ghostCellNum; ++e)
                 {
                     const int e1 = e + 1;
@@ -971,7 +973,7 @@ void CWENOFD::setBoundary(void)
                         m_Uh[m_endPointX - 1 + e1][ej].vector[r] = m_Uh[m_endPointX - 1 - e1][ej].vector[r];
                 }
                 break;
-            case slip:
+            case SLIP:
                 for (int e = 0; e != m_ghostCellNum; ++e)
                 {
                     const int e1 = e + 1;
@@ -982,7 +984,7 @@ void CWENOFD::setBoundary(void)
                 }
                 break;
 
-            case special:
+            case SPECIAL:
                 for (int e = 0; e != m_ghostCellNum; ++e)
                 {
                     const int e1 = e + 1;
