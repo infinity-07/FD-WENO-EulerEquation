@@ -113,13 +113,5 @@ mpirun -np 4 ./wenofv
 
 如需协助或合作，请联系作者：
 
-作者: [您的姓名]
-邮箱: yourname@example.com
-```
-
----
-
-```
-
-如需我为您生成对应的 `Makefile`、配置示例（如 `config.cfg`），或 `Equations.hpp` 框架样例，也可以告诉我！
+邮箱: cauzhangyang@outlook.com
 ```
