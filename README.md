@@ -1,4 +1,4 @@
-# WENO Finite Volume Solver (WENOFV)
+# WENO Finite Difference Solver (WENOFD)
 
 ## 🔍 简介
 
@@ -13,11 +13,13 @@
 - Tecplot 可视化输出
 - 自动误差评估与精度验证
 
+## 🚧 开发计划
+[] 增加二进制格式的 tecplot 文件输出方法
+[] 增加 paraview 文件输出方法
+[] 增加保正限制器
+
 ## 📁 文件结构
-
-
 ```
-
 ├── WENOFV.cpp             # 主程序实现
 ├── WENOFV.hpp             # 类声明（需要提供）
 ├── Equations.hpp/.cpp     # 方程定义与参数设置（需要提供）
@@ -29,7 +31,6 @@
 │   ├── error\_*.plt        # 解误差图
 │   └── accuracy\_\*.csv     # 误差范数表格
 └── Makefile               # 编译脚本（推荐添加）
-
 ````
 
 
