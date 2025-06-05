@@ -40,8 +40,8 @@ public:
 	BOUNDARYTYPE leftBoundaryCondition, rightBoundaryCondition;
 	BOUNDARYTYPE topBoundaryCondition, bottomBoundaryCondition;
 
-	std::function<double(double, double, double)> theVarExact;
-	std::function<double(Array1D<double>)> theVarUh;
+	std::function<double(const double, const double, const double)> theVarExact;
+	std::function<double(const Array1D<double>)> theVarUh;
 	bool u_exact_exist;
 
 public:
@@ -56,14 +56,14 @@ public:
 	}
 
 	// (1-2) PhyFlux
-	inline void getPhyFlux(const Array1D<double> Uh, Array1D<double> &Flux, double nx, double ny)
+	inline void getPhyFlux(const Array1D<double> &Uh, Array1D<double> &Flux, double nx, double ny)
 	{
 		// U
-		double rho = Uh[0];
-		double u = Uh[1] / Uh[0];
-		double v = Uh[2] / Uh[0];
-		double E = Uh[3];
-		double p = (euler_gamma - 1.0) * (E - 0.5 * rho * (u * u + v * v));
+		const double rho = Uh[0];
+		const double u = Uh[1] / Uh[0];
+		const double v = Uh[2] / Uh[0];
+		const double E = Uh[3];
+		const double p = (euler_gamma - 1.0) * (E - 0.5 * rho * (u * u + v * v));
 
 		if (nx > ny)
 		{
@@ -82,148 +82,248 @@ public:
 		}
 	}
 
+	inline void getPhyFluxX(const Array1D<double> &Uh, Array1D<double> &Flux)
+	{
+		// U
+		const double rho = Uh[0];
+		const double u = Uh[1] / Uh[0];
+		const double v = Uh[2] / Uh[0];
+		const double E = Uh[3];
+		const double p = (euler_gamma - 1.0) * (E - 0.5 * rho * (u * u + v * v));
+
+		// Flux
+		Flux[0] = rho * u;
+		Flux[1] = rho * u * u + p;
+		Flux[2] = rho * u * v;
+		Flux[3] = (E + p) * u;
+	}
+
+	inline void getPhyFluxY(const Array1D<double> &Uh, Array1D<double> &Flux)
+	{
+		// U
+		const double rho = Uh[0];
+		const double u = Uh[1] / Uh[0];
+		const double v = Uh[2] / Uh[0];
+		const double E = Uh[3];
+		const double p = (euler_gamma - 1.0) * (E - 0.5 * rho * (u * u + v * v));
+
+		Flux[0] = rho * v;
+		Flux[1] = rho * u * v;
+		Flux[2] = rho * v * v + p;
+		Flux[3] = (E + p) * v;
+	}
+
 	// (1-3) eigen Values
 	inline double getMaxEigenValue(const Array1D<double> &Uh, double nx, double ny)
 	{
-		double rho = Uh[0];
-		double u = Uh[1] / Uh[0];
-		double v = Uh[2] / Uh[0];
-		double E = Uh[3];
-		double p = (euler_gamma - 1.0) * (E - 0.5 * rho * (u * u + v * v));
-		double c = sqrt(euler_gamma * p / rho);
-		double MaxeigValue = fabs(u * nx + v * ny) + c;
+		const double rho = Uh[0];
+		const double u = Uh[1] / Uh[0];
+		const double v = Uh[2] / Uh[0];
+		const double E = Uh[3];
+		const double p = (euler_gamma - 1.0) * (E - 0.5 * rho * (u * u + v * v));
+		const double c = sqrt(euler_gamma * p / rho);
 
-		return MaxeigValue;
+		return fabs(u * nx + v * ny) + c; // MaxeigValue
+	}
+
+	inline double getMaxEigenValueX(const Array1D<double> &Uh)
+	{
+		const double rho = Uh[0];
+		const double u = Uh[1] / Uh[0];
+		const double v = Uh[2] / Uh[0];
+		const double E = Uh[3];
+		const double p = (euler_gamma - 1.0) * (E - 0.5 * rho * (u * u + v * v));
+		const double c = sqrt(euler_gamma * p / rho);
+
+		return u + c; // MaxeigValue
+	}
+
+	inline double getMaxEigenValueY(const Array1D<double> &Uh)
+	{
+		const double rho = Uh[0];
+		const double u = Uh[1] / Uh[0];
+		const double v = Uh[2] / Uh[0];
+		const double E = Uh[3];
+		const double p = (euler_gamma - 1.0) * (E - 0.5 * rho * (u * u + v * v));
+		const double c = sqrt(euler_gamma * p / rho);
+
+		return v + c; // MaxeigValue
 	}
 
 	// (1-4) Left Eigen Matrix
-	inline void getLEigenMatrix(const Array1D<double> &Uh, double nx, double ny, Array2D<double> &eigMatrix)
+	inline void getLEigenMatrixX(const Array1D<double> &Uh, Array2D<double> &eigMatrix)
 	{
-		double rho = Uh[0];
-		double u = Uh[1] / Uh[0];
-		double v = Uh[2] / Uh[0];
-		double E = Uh[3];
-		double p = (euler_gamma - 1.0) * (E - 0.5 * rho * (u * u + v * v));
-		double c = sqrt(euler_gamma * p / rho);
-		double B1 = (euler_gamma - 1) / pow(c, 2);
-		double B2 = B1 * (pow(u, 2) + pow(v, 2)) / 2;
+		const double rho = Uh[0];
+		const double u = Uh[1] / Uh[0];
+		const double v = Uh[2] / Uh[0];
+		const double E = Uh[3];
+		const double p = (euler_gamma - 1.0) * (E - 0.5 * rho * (u * u + v * v));
+		const double c = sqrt(euler_gamma * p / rho);
+		const double B1 = (euler_gamma - 1) / (c * c);
+		const double B2 = B1 * (u * u + v * v) / 2;
 
-		if (fabs(nx) > fabs(ny)) // x-direction
-		{
-			eigMatrix[0][0] = (B2 + u / c) / 2;
-			eigMatrix[1][0] = v;
-			eigMatrix[2][0] = (1 - B2);
-			eigMatrix[3][0] = (B2 - u / c) / 2;
+		eigMatrix[0][0] = (B2 + u / c) / 2;
+		eigMatrix[1][0] = v;
+		eigMatrix[2][0] = (1 - B2);
+		eigMatrix[3][0] = (B2 - u / c) / 2;
 
-			eigMatrix[0][1] = -(B1 * u + 1.0 / c) / 2;
-			eigMatrix[1][1] = 0;
-			eigMatrix[2][1] = B1 * u;
-			eigMatrix[3][1] = -(B1 * u - 1.0 / c) / 2;
+		eigMatrix[0][1] = -(B1 * u + 1.0 / c) / 2;
+		eigMatrix[1][1] = 0;
+		eigMatrix[2][1] = B1 * u;
+		eigMatrix[3][1] = -(B1 * u - 1.0 / c) / 2;
 
-			eigMatrix[0][2] = -(B1 * v) / 2;
-			eigMatrix[1][2] = -1;
-			eigMatrix[2][2] = B1 * v;
-			eigMatrix[3][2] = -B1 * v / 2;
+		eigMatrix[0][2] = -(B1 * v) / 2;
+		eigMatrix[1][2] = -1;
+		eigMatrix[2][2] = B1 * v;
+		eigMatrix[3][2] = -B1 * v / 2;
 
-			eigMatrix[0][3] = B1 / 2;
-			eigMatrix[1][3] = 0;
-			eigMatrix[2][3] = -B1;
-			eigMatrix[3][3] = B1 / 2;
-		}
-		else // y-direction
-		{
-			eigMatrix[0][0] = (B2 + v / c) / 2;
-			eigMatrix[1][0] = -u;
-			eigMatrix[2][0] = 1 - B2;
-			eigMatrix[3][0] = (B2 - v / c) / 2;
+		eigMatrix[0][3] = B1 / 2;
+		eigMatrix[1][3] = 0;
+		eigMatrix[2][3] = -B1;
+		eigMatrix[3][3] = B1 / 2;
+	}
 
-			eigMatrix[0][1] = -(B1 * u) / 2;
-			eigMatrix[1][1] = 1;
-			eigMatrix[2][1] = B1 * u;
-			eigMatrix[3][1] = -(B1 * u) / 2;
+	inline void getLEigenMatrixY(const Array1D<double> &Uh, Array2D<double> &eigMatrix)
+	{
+		const double rho = Uh[0];
+		const double u = Uh[1] / Uh[0];
+		const double v = Uh[2] / Uh[0];
+		const double E = Uh[3];
+		const double p = (euler_gamma - 1.0) * (E - 0.5 * rho * (u * u + v * v));
+		const double c = sqrt(euler_gamma * p / rho);
+		const double B1 = (euler_gamma - 1) / (c * c);
+		const double B2 = B1 * (u * u + v * v) / 2;
 
-			eigMatrix[0][2] = -(B1 * v + 1.0 / c) / 2;
-			eigMatrix[1][2] = 0;
-			eigMatrix[2][2] = B1 * v;
-			eigMatrix[3][2] = -(B1 * v - 1.0 / c) / 2;
+		eigMatrix[0][0] = (B2 + v / c) / 2;
+		eigMatrix[1][0] = -u;
+		eigMatrix[2][0] = 1 - B2;
+		eigMatrix[3][0] = (B2 - v / c) / 2;
 
-			eigMatrix[0][3] = B1 / 2;
-			eigMatrix[1][3] = 0;
-			eigMatrix[2][3] = -B1;
-			eigMatrix[3][3] = B1 / 2;
-		}
+		eigMatrix[0][1] = -(B1 * u) / 2;
+		eigMatrix[1][1] = 1;
+		eigMatrix[2][1] = B1 * u;
+		eigMatrix[3][1] = -(B1 * u) / 2;
+
+		eigMatrix[0][2] = -(B1 * v + 1.0 / c) / 2;
+		eigMatrix[1][2] = 0;
+		eigMatrix[2][2] = B1 * v;
+		eigMatrix[3][2] = -(B1 * v - 1.0 / c) / 2;
+
+		eigMatrix[0][3] = B1 / 2;
+		eigMatrix[1][3] = 0;
+		eigMatrix[2][3] = -B1;
+		eigMatrix[3][3] = B1 / 2;
 	}
 
 	// (1-5) Right Eigen Matrix
-	inline void getREigenMatrix(const Array1D<double> &Uh, double nx, double ny, Array2D<double> &eigMatrix)
+	inline void getREigenMatrixX(const Array1D<double> &Uh, Array2D<double> &eigMatrix)
 	{
-		double rho = Uh[0];
-		double u = Uh[1] / Uh[0];
-		double v = Uh[2] / Uh[0];
-		double E = Uh[3];
-		double p = (euler_gamma - 1.0) * (E - 0.5 * rho * (u * u + v * v));
-		double c = sqrt(euler_gamma * p / rho);
-		double H = (E + p) / rho;
+		const double rho = Uh[0];
+		const double u = Uh[1] / Uh[0];
+		const double v = Uh[2] / Uh[0];
+		const double E = Uh[3];
+		const double p = (euler_gamma - 1.0) * (E - 0.5 * rho * (u * u + v * v));
+		const double c = sqrt(euler_gamma * p / rho);
+		const double H = (E + p) / rho;
 
-		if (fabs(nx) > fabs(ny)) // x-direction
-		{
-			eigMatrix[0][0] = 1;
-			eigMatrix[1][0] = u - c;
-			eigMatrix[2][0] = v;
-			eigMatrix[3][0] = H - c * u;
+		eigMatrix[0][0] = 1;
+		eigMatrix[1][0] = u - c;
+		eigMatrix[2][0] = v;
+		eigMatrix[3][0] = H - c * u;
 
-			eigMatrix[0][1] = 0;
-			eigMatrix[1][1] = 0;
-			eigMatrix[2][1] = -1;
-			eigMatrix[3][1] = -v;
+		eigMatrix[0][1] = 0;
+		eigMatrix[1][1] = 0;
+		eigMatrix[2][1] = -1;
+		eigMatrix[3][1] = -v;
 
-			eigMatrix[0][2] = 1;
-			eigMatrix[1][2] = u;
-			eigMatrix[2][2] = v;
-			eigMatrix[3][2] = (pow(u, 2) + pow(v, 2)) / 2;
+		eigMatrix[0][2] = 1;
+		eigMatrix[1][2] = u;
+		eigMatrix[2][2] = v;
+		eigMatrix[3][2] = (u * u + v * v) / 2;
 
-			eigMatrix[0][3] = 1;
-			eigMatrix[1][3] = u + c;
-			eigMatrix[2][3] = v;
-			eigMatrix[3][3] = H + c * u;
-		}
-		else // y-direction
-		{
-			eigMatrix[0][0] = 1;
-			eigMatrix[1][0] = u;
-			eigMatrix[2][0] = v - c;
-			eigMatrix[3][0] = H - c * v;
+		eigMatrix[0][3] = 1;
+		eigMatrix[1][3] = u + c;
+		eigMatrix[2][3] = v;
+		eigMatrix[3][3] = H + c * u;
+	}
 
-			eigMatrix[0][1] = 0;
-			eigMatrix[1][1] = 1;
-			eigMatrix[2][1] = 0;
-			eigMatrix[3][1] = u;
+	inline void getREigenMatrixY(const Array1D<double> &Uh, Array2D<double> &eigMatrix)
+	{
+		const double rho = Uh[0];
+		const double u = Uh[1] / Uh[0];
+		const double v = Uh[2] / Uh[0];
+		const double E = Uh[3];
+		const double p = (euler_gamma - 1.0) * (E - 0.5 * rho * (u * u + v * v));
+		const double c = sqrt(euler_gamma * p / rho);
+		const double H = (E + p) / rho;
 
-			eigMatrix[0][2] = 1;
-			eigMatrix[1][2] = u;
-			eigMatrix[2][2] = v;
-			eigMatrix[3][2] = (pow(u, 2) + pow(v, 2)) / 2;
+		eigMatrix[0][0] = 1;
+		eigMatrix[1][0] = u;
+		eigMatrix[2][0] = v - c;
+		eigMatrix[3][0] = H - c * v;
 
-			eigMatrix[0][3] = 1;
-			eigMatrix[1][3] = u;
-			eigMatrix[2][3] = v + c;
-			eigMatrix[3][3] = H + c * v;
-		}
+		eigMatrix[0][1] = 0;
+		eigMatrix[1][1] = 1;
+		eigMatrix[2][1] = 0;
+		eigMatrix[3][1] = u;
+
+		eigMatrix[0][2] = 1;
+		eigMatrix[1][2] = u;
+		eigMatrix[2][2] = v;
+		eigMatrix[3][2] = (u * u + v * v) / 2;
+
+		eigMatrix[0][3] = 1;
+		eigMatrix[1][3] = u;
+		eigMatrix[2][3] = v + c;
+		eigMatrix[3][3] = H + c * v;
 	}
 
 	// (1-6) Num flux - (a) LLF
-	inline void getLLFRiemannFlux(const Array1D<double> UL, const Array1D<double> UR, Array1D<double> &Flux, double nx, double ny)
+	inline void getLLFRiemannFlux(const Array1D<double> &UL, const Array1D<double> &UR, Array1D<double> &Flux, double nx, double ny)
 	{
 		// LLF approximate Riemann flux
-		int varNum = getVarNum();
-		Array1D<double> FUL(varNum), FUR(varNum);
-		double ws_L(0), ws_R(0), ws(0);
+		const int varNum = getVarNum();
+		const double ws_L = getMaxEigenValue(UL, nx, ny);
+		const double ws_R = getMaxEigenValue(UR, nx, ny);
+		const double ws = std::max(ws_L, ws_R);
 
+		Array1D<double> FUL(varNum), FUR(varNum);
 		getPhyFlux(UL, FUL, nx, ny);
 		getPhyFlux(UR, FUR, nx, ny);
-		ws_L = getMaxEigenValue(UL, nx, ny);
-		ws_R = getMaxEigenValue(UR, nx, ny);
-		ws = std::max(ws_L, ws_R);
+
+		// conservative variable
+		for (int r = 0; r != varNum; ++r)
+			Flux[r] = 0.5 * (FUL[r] + FUR[r] - ws * (UR[r] - UL[r]));
+	}
+
+	inline void getLLFRiemannFluxX(const Array1D<double> &UL, const Array1D<double> &UR, Array1D<double> &Flux)
+	{
+		// LLF approximate Riemann flux
+		const int varNum = getVarNum();
+		const double ws_L = getMaxEigenValueX(UL);
+		const double ws_R = getMaxEigenValueX(UR);
+		const double ws = std::max(ws_L, ws_R);
+
+		Array1D<double> FUL(varNum), FUR(varNum);
+		getPhyFluxX(UL, FUL);
+		getPhyFluxX(UR, FUR);
+
+		// conservative variable
+		for (int r = 0; r != varNum; ++r)
+			Flux[r] = 0.5 * (FUL[r] + FUR[r] - ws * (UR[r] - UL[r]));
+	}
+
+	inline void getLLFRiemannFluxY(const Array1D<double> &UL, const Array1D<double> &UR, Array1D<double> &Flux)
+	{
+		// LLF approximate Riemann flux
+		const int varNum = getVarNum();
+		const double ws_L = getMaxEigenValueY(UL);
+		const double ws_R = getMaxEigenValueY(UR);
+		const double ws = std::max(ws_L, ws_R);
+
+		Array1D<double> FUL(varNum), FUR(varNum);
+		getPhyFluxY(UL, FUL);
+		getPhyFluxY(UR, FUR);
 
 		// conservative variable
 		for (int r = 0; r != varNum; ++r)
@@ -287,13 +387,13 @@ public:
 			yL = 0.0;
 			yR = 2.0;
 			outputtime = 0.52;
-			leftBoundaryCondition = slip;
-			rightBoundaryCondition = slip;
-			topBoundaryCondition = slip;
-			bottomBoundaryCondition = slip;
+			leftBoundaryCondition = symmetric;
+			rightBoundaryCondition = symmetric;
+			topBoundaryCondition = symmetric;
+			bottomBoundaryCondition = symmetric;
 			euler_gamma = 1.4;
 
-			rho0 = [this](double xP, double yP)
+			rho0 = [this](const double xP, const double yP)
 			{
 				if (xP < 1.0 && yP < 1.0)
 					return 0.8;
@@ -307,7 +407,7 @@ public:
 				std::cout << "initial value error!" << std::endl;
 				return 0.0;
 			};
-			u0 = [this](double xP, double yP)
+			u0 = [this](const double xP, const double yP)
 			{
 				if (xP < 1.0 && yP < 1.0)
 					return 0.0;
@@ -321,7 +421,7 @@ public:
 				std::cout << "initial value error!" << std::endl;
 				return 0.0;
 			};
-			v0 = [this](double xP, double yP)
+			v0 = [this](const double xP, const double yP)
 			{
 				if (xP < 1.0 && yP < 1.0)
 					return 0.0;
@@ -485,7 +585,7 @@ public:
 	}
 
 	// (2-3) 将物理变量转换成双曲型方程 Ut+f(U)x = 0 的 U
-	inline void getU0(double xP, double yP, Array1D<double> &U)
+	inline void getU0(const double xP, const double yP, Array1D<double> &U)
 	{
 		double rho = rho0(xP, yP);
 		double u = u0(xP, yP);
@@ -520,14 +620,14 @@ public:
 	}
 
 	// (3-3) 输出变量的值
-	inline void getVitalVarVal(const Array1D<double> Uh, Array1D<double> &VitalVar)
+	inline void getVitalVarVal(const Array1D<double> &Uh, Array1D<double> &VitalVar)
 	{
-		double rho = Uh[0];
-		double u = Uh[1] / Uh[0];
-		double v = Uh[2] / Uh[0];
-		double E = Uh[3];
-		double pre = (euler_gamma - 1.0) * (E - 0.5 * rho * (u * u + v * v));
-		double c = sqrt(euler_gamma * pre / rho);
+		const double rho = Uh[0];
+		const double u = Uh[1] / Uh[0];
+		const double v = Uh[2] / Uh[0];
+		const double E = Uh[3];
+		const double pre = (euler_gamma - 1.0) * (E - 0.5 * rho * (u * u + v * v));
+		const double c = sqrt(euler_gamma * pre / rho);
 
 		VitalVar[0] = rho;
 		VitalVar[1] = u;

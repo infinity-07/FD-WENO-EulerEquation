@@ -500,8 +500,11 @@ void CWENOFD::assembleBoundaryTerm(void)
             for (int r = 0; r != m_varNum; r++)
                 aveFace[r] = 0.5 * (m_Uh[faceI - 1][ej].vector[r] + m_Uh[faceI][ej].vector[r]);
 
-            equation->getLEigenMatrix(aveFace, 1, 0, eigenMatrixL);
-            equation->getREigenMatrix(aveFace, 1, 0, eigenMatrixR);
+            // equation->getLEigenMatrix(aveFace, 1, 0, eigenMatrixL);
+            // equation->getREigenMatrix(aveFace, 1, 0, eigenMatrixR);
+
+            equation->getLEigenMatrixX(aveFace, eigenMatrixL);
+            equation->getREigenMatrixX(aveFace, eigenMatrixR);
 
             // 2. 将 flux_plus 和 flux_minus 投影到特征空间
             for (int s = -2; s <= 2; ++s) // 共5点模板
@@ -574,8 +577,8 @@ void CWENOFD::assembleBoundaryTerm(void)
                 aveFace[r] = 0.5 * (m_Uh[ei][faceJ - 1].vector[r] + m_Uh[ei][faceJ].vector[r]);
 
             // 获取特征矩阵 L 和 R（法向量 (0,1)）
-            equation->getLEigenMatrix(aveFace, 0, 1, eigenMatrixL);
-            equation->getREigenMatrix(aveFace, 0, 1, eigenMatrixR);
+            equation->getLEigenMatrixY(aveFace, eigenMatrixL);
+            equation->getREigenMatrixY(aveFace, eigenMatrixR);
 
             // 2. 投影 flux_plus/flux_minus 到特征空间
             for (int s = -2; s <= 2; ++s)
