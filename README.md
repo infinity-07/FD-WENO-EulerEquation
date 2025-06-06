@@ -22,13 +22,15 @@
 - [ ] 给 readme 文件增加算例计算结果图
 - [ ] 给出 MPI 加速比，提升并行效率，一个可行的路线是在 MPI 并行的同时完成计算
 - [ ] 现在只支持五阶格式重构，三点格式七点格式很不方便
+- [ ] 删掉大部分 prolog 代码
+- [ ] 储存一些结果便于对照
 
 ## 📁 文件结构
 ```
 ├── WENOFV.cpp             # 主程序实现
-├── WENOFV.hpp             # 类声明（需要提供）
-├── Equations.hpp/.cpp     # 方程定义与参数设置（需要提供）
-├── Utility.hpp/.cpp       # 工具函数与定时器（需要提供）
+├── WENOFV.hpp             # 类声明
+├── Equations.hpp     # 方程定义与参数设置
+├── Utility.hpp       # 工具函数
 ├── input/
 │   └── config.cfg         # 配置文件
 ├── output/
