@@ -20,6 +20,8 @@
 - [ ] 给通用文件前增加文件信息
 - [ ] 每次运行时能够将数据输出到不同的文件夹，并且备份一份代码
 - [ ] 给 readme 文件增加算例计算结果图
+- [ ] 给出 MPI 加速比，提升并行效率，一个可行的路线是在 MPI 并行的同时完成计算
+- [ ] 现在只支持五阶格式重构，三点格式七点格式很不方便
 
 ## 📁 文件结构
 ```
@@ -33,42 +35,42 @@
 │   ├── average\_*.plt      # 平均变量输出
 │   ├── error\_*.plt        # 解误差图
 │   └── accuracy\_\*.csv     # 误差范数表格
-└── Makefile               # 编译脚本（推荐添加）
+└── Makefile               # 编译脚本
 ````
 
 
-## ⚙️ 编译说明
 
-依赖：
-
-- 支持 C++17 的编译器（如 `g++`）
-- MPI 库（如 OpenMPI 或 MPICH）
-
-编译命令示例：
-
-```bash
-make clean
-make
-```
 
 ## 🚀 运行方式
+以下运行方式说明均基于 linux 系统
 
-1. 修改 `input/config.cfg` 文件，设置模拟参数：
+1. 安装 支持 C++17 的编译器（如 `g++`）
+- MPI 库（如 OpenMPI 或 MPICH）
+
+2. 修改 `input/config.cfg` 文件，设置模拟参数：
 
 | 参数名      | 含义                             |
 | -------- | ------------------------------ |
-| TESTCASE | 测试算例编号                         |
+| TESTCASE | 测试算例编号（                       |
 | SCHEME   | 重构方案（0=WENO, 1=WENOZ）          |
 | CFL      | CFL 数                          |
 | RKMETH   | Runge-Kutta 方法（0,1,2 对应 RK1-3） |
 | ELEMNUMX | x 方向网格数                        |
 | ELEMNUMY | y 方向网格数                        |
 
-2. 运行程序（以 4 个线程为例）：
+3. 编译程序
+```bash
+make clean
+make
+```
+ 
+4. 运行程序（以 4 个线程为例）：
 
 ```bash
 mpirun -np 4 ./wenofv
 ```
+
+输出结果储存在 output 文件夹中
 
 
 ## 📤 输出说明
@@ -93,13 +95,6 @@ mpirun -np 4 ./wenofv
 | `outputAve()`        | 输出平均变量到 Tecplot           |
 | `outputError()`      | 输出解误差图                    |
 | `outputAccuracy()`   | 误差范数评估并写入 csv 文件          |
-
-
-## 📌 注意事项
-
-* 请确保 `input/config.cfg` 文件存在，且格式正确
-* 所有输出文件默认保存至 `./output/` 文件夹
-* 若使用并行，请确保节点间文件系统一致（如共享目录）
 
 ## 🙋 联系方式
 
