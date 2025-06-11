@@ -95,7 +95,7 @@ make
 4. 运行程序（以 4 个线程为例）：
 
 ```bash
-mpirun -np 4 ./wenofv
+mpirun -np 4 ./bin/program
 ```
 
 输出结果储存在 output 文件夹中
