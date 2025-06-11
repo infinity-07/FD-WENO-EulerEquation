@@ -1,0 +1,12 @@
+# 忽略 output/ 下的所有文件，但保留 .gitkeep
+output/*
+!output/.gitkeep
+
+# 忽略所有 .o 文件
+*.o
+
+# 忽略所有 .d 文件
+*.d
+
+# 忽略名为 program 的文件
+program
