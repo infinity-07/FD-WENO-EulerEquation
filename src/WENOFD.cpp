@@ -1302,8 +1302,8 @@ void CWENOFD::outputError(std::string prefix)
                     for (int r = 0; r != m_varNum; r++)
                         Uhh[r] = m_worldUh[ei][ej].vector[r];
 
-                    double Uref = equation->theVarExact(m_worldGrids[ei][ej].m_xCenter, m_worldGrids[ei][ej].m_yCenter, m_now);
-                    double Ucal = equation->theVarUh(Uhh);
+                    const double Uref = equation->theVarExact(m_worldGrids[ei][ej].m_xCenter, m_worldGrids[ei][ej].m_yCenter, m_now);
+                    const double Ucal = equation->theVarUh(Uhh);
 
                     outputFile << m_worldGrids[ei][ej].m_xCenter << " ";
                     outputFile << m_worldGrids[ei][ej].m_yCenter << " ";
@@ -1323,23 +1323,6 @@ void CWENOFD::outputError(std::string prefix)
     MPI_Barrier(MPI_COMM_WORLD);
 }
 
-// void CWENOFD::copyConfig()
-// {
-//     // Input file path and name
-//     std::filesystem::path inputFileName = "./input/config.cfg";
-//     // Output file path and name
-//     std::filesystem::path outputFileName = "./output/config_copy.cfg";
-//     try
-//     {
-//         // Use std::filesystem::copy to copy the file
-//         std::filesystem::copy(inputFileName, outputFileName, std::filesystem::copy_options::overwrite_existing);
-//         std::cout << "File copied successfully." << std::endl;
-//     }
-//     catch (const std::filesystem::filesystem_error &e)
-//     {
-//         std::cerr << "Error: " << e.what() << std::endl;
-//     }
-// }
 void CWENOFD::outputAccuracy(std::string prefix)
 {
     if (m_rank == 0)

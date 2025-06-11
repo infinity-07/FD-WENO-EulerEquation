@@ -10,3 +10,17 @@ output/*
 
 # 忽略名为 program 的文件
 program
+
+*.aux
+
+*.log
+
+*.out
+
+*.gz
+
+*.toc
+
+*.plt
+
+*.csv
