@@ -50,7 +50,16 @@ void CWENOFD::initializeSolver(std::map<std::string, std::string> option)
     // 将余数分散到前多个线程
     m_numPointsX = basePointNumX + (m_rank < remainder ? 1 : 0);
 
-    // 给线程rank分配localElemNumX个元素
+    m_numPointsX_per_rank.resize(m_size);
+    m_startPointX_per_rank.resize(m_size);
+
+    MPI_Allgather(&m_numPointsX, 1, MPI_INT, m_numPointsX_per_rank.data(), 1, MPI_INT, MPI_COMM_WORLD);
+
+    m_startPointX_per_rank[0] = 0;
+    for (int i = 1; i < m_size; ++i)
+        m_startPointX_per_rank[i] = m_startPointX_per_rank[i - 1] + m_numPointsX_per_rank[i - 1];
+
+    // Y 方向上不做分割
     m_numPointsY = m_worldPointNumY;
 
     m_startPointX = m_ghostCellNum;
@@ -64,7 +73,7 @@ void CWENOFD::initializeSolver(std::map<std::string, std::string> option)
     m_deltaX = (equation->xR - equation->xL) / (m_worldPointNumX - 1); // Structured grid
     m_deltaY = (equation->yR - equation->yL) / (m_worldPointNumY - 1); // Structured grid
 
-    const double procXLeft = equation->xL + m_procIndexX * basePointNumX * m_deltaX;
+    const double procXLeft = equation->xL + m_startPointX_per_rank[m_rank] * m_deltaX; // bug
     const double procYLeft = equation->yL;
 
     const double procGhostXLeft = procXLeft - m_deltaX * m_ghostCellNum;
@@ -82,8 +91,7 @@ void CWENOFD::initializeSolver(std::map<std::string, std::string> option)
     //     std::cout << "Generating grid..." << std::endl;
 
     // Generate computational grid
-    double loc_xCenter,
-        loc_yCenter;
+    double loc_xCenter, loc_yCenter;
     m_grids.Resize(m_totalPointNumX, m_totalPointNumY);
     for (int ei = 0; ei < m_totalPointNumX; ++ei)
     {
@@ -201,6 +209,7 @@ void CWENOFD::run(std::map<std::string, std::string> option)
     initializeAve();
 
     outputAve("initial");
+    debugOutput("initial");
 
     m_mainTimer.start();
 
@@ -261,6 +270,7 @@ void CWENOFD::run(std::map<std::string, std::string> option)
     m_mainTimer.pause();
 
     outputAve("final");
+    debugOutput("final");
 
     if (equation->u_exact_exist)
     {
@@ -378,8 +388,8 @@ double CWENOFD::calculateDeltaT()
 
     // Temporary variables for calculations
     double tmp(0);
-    Array1D<double> loc_Uh(m_varNum);
     double eigenvalueX(0), eigenvalueY(0);
+    Array1D<double> loc_Uh(m_varNum);
 
     // calculate the time step
     loc_Uh.setZero();
@@ -894,8 +904,8 @@ void CWENOFD::exchangeGhostCellsValue(void)
     MPI_Status statuses[4];
 
     // Define neighbors
-    int leftRank = (m_rank == 0) ? m_size - 1 : m_rank - 1;
-    int rightRank = (m_rank == m_size - 1) ? 0 : m_rank + 1;
+    const int leftRank = (m_rank == 0) ? m_size - 1 : m_rank - 1;
+    const int rightRank = (m_rank == m_size - 1) ? 0 : m_rank + 1;
 
     // Post receives
     MPI_Irecv(recvBufLeft.data(), MLENGTH, MPI_DOUBLE, leftRank, 1, MPI_COMM_WORLD, &requests[0]);
@@ -936,50 +946,35 @@ void CWENOFD::GatherAllUhToRank0()
     // 收集所有线程的数据到线程0，用于输出
     MPI_Barrier(MPI_COMM_WORLD);
 
-    // Step 1: 收集所有线程的 m_numPointsX 到线程0
-    std::vector<int> m_numPointsX_per_rank(m_size, 0);
-    MPI_Gather(&m_numPointsX, 1, MPI_INT, m_numPointsX_per_rank.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-    // Step 2: 计算每个线程的 startPointX（线程0完成）
-    std::vector<int> m_startPointX_per_rank(m_size, 0);
-    if (m_rank == 0)
-    {
-        m_startPointX_per_rank[0] = 0;
-        for (int i = 1; i < m_size; ++i)
-            m_startPointX_per_rank[i] = m_startPointX_per_rank[i - 1] + m_numPointsX_per_rank[i - 1];
-    }
-
-    // Step 3: 广播 startPointX_per_rank 给所有线程（也可以只线程0用，但这样通用）
-    MPI_Bcast(m_startPointX_per_rank.data(), m_size, MPI_INT, 0, MPI_COMM_WORLD);
-
     // Step 4: 数据收集和发送
     if (m_rank == 0)
     {
         // 收集其他线程的数据
         for (int src_rank = 1; src_rank < m_size; ++src_rank)
         {
-            int recvNX = m_numPointsX_per_rank[src_rank];
+            const int recvNX = m_numPointsX_per_rank[src_rank];
             std::vector<double> recvBuffer(recvNX * m_numPointsY * m_varNum);
             MPI_Status status;
             MPI_Recv(recvBuffer.data(), recvBuffer.size(), MPI_DOUBLE, src_rank, 0, MPI_COMM_WORLD, &status);
 
-            int offsetX = m_startPointX_per_rank[src_rank];
+            const int offsetX = m_startPointX_per_rank[src_rank];
 
+            int index = 0;
             for (int ei = 0; ei < recvNX; ++ei)
             {
                 for (int ej = 0; ej < m_numPointsY; ++ej)
                 {
                     for (int r = 0; r < m_varNum; ++r)
                     {
-                        int index = (ei * m_numPointsY * m_varNum) + (ej * m_varNum) + r;
                         m_worldUh[ei + offsetX + m_ghostCellNum][ej + m_ghostCellNum].vector[r] = recvBuffer[index];
+                        index++;
                     }
                 }
             }
         }
 
         // 拷贝自身数据
-        int offsetX = m_startPointX_per_rank[0];
+        const int offsetX = m_startPointX_per_rank[0];
         for (int ei = 0; ei < m_numPointsX; ++ei)
         {
             for (int ej = 0; ej < m_numPointsY; ++ej)
@@ -996,14 +991,15 @@ void CWENOFD::GatherAllUhToRank0()
     {
         // 序列化并发送 m_Uh 给线程0
         std::vector<double> sendBuffer(m_numPointsX * m_numPointsY * m_varNum);
+        int index = 0;
         for (int ei = 0; ei < m_numPointsX; ++ei)
         {
             for (int ej = 0; ej < m_numPointsY; ++ej)
             {
                 for (int r = 0; r < m_varNum; ++r)
                 {
-                    int index = (ei * m_numPointsY * m_varNum) + (ej * m_varNum) + r;
                     sendBuffer[index] = m_Uh[ei + m_ghostCellNum][ej + m_ghostCellNum].vector[r];
+                    index++;
                 }
             }
         }
@@ -1192,7 +1188,7 @@ void CWENOFD::outputAve(std::string prefix)
     {
         logMessage("outputing average solution...");
 
-        int VitalVarNum = equation->getVitalVarNum();
+        const int VitalVarNum = equation->getVitalVarNum();
         Array1D<double> VitalVar(VitalVarNum);
         Array1D<double> VitalVarAve(VitalVarNum);
 
@@ -1454,4 +1450,101 @@ void CWENOFD::backupProjectFiles()
             std::cerr << "警告: 源目录不存在 " << src << std::endl;
         }
     }
+}
+
+void CWENOFD::debugOutput(const std::string &prefix)
+{
+    // 输出守恒变量到文本文件，便于调试
+
+    // m_MPITimer.start();
+    exchangeGhostCellsValue();
+    // m_MPITimer.pause();
+
+    // m_outputTimer.start();
+    setBoundary();
+    GatherAllUhToRank0();
+
+    // output
+    // if (m_rank == 0)
+    // {
+    //     logMessage("outputing average solution...");
+
+    //     // Output file name
+    //     // std::string filename = m_outputDir + "average_" + prefix + ".plt";
+    //     // std::ofstream outputFile(filename);
+
+    //     // if (outputFile.is_open())
+    //     // {
+    //     //     outputFile << "TITLE=DGSolution" << std::endl;
+    //     //     outputFile << "VARIABLES=";
+    //     //     outputFile << "X ";
+    //     //     outputFile << "Y ";
+    //     //     for (int k = 0; k != VitalVarNum; k++)
+    //     //         outputFile << VitalVarName[k] << " ";
+
+    //     //     outputFile << std::endl;
+    //     //     outputFile << "ZONE T=TA, ";
+    //     //     outputFile << "I="; // Y - direction
+    //     //     outputFile << m_worldPointNumY << ", ";
+    //     //     outputFile << "J="; // X - direction
+    //     //     outputFile << m_worldPointNumX << ", ";
+    //     //     outputFile << "DATAPACKING = POINT" << std::endl;
+
+    //     //     for (int ei = m_ghostCellNum; ei != m_worldPointNumX + m_ghostCellNum; ei++)
+    //     //     {
+    //     //         for (int ej = m_ghostCellNum; ej != m_worldPointNumY + m_ghostCellNum; ej++)
+    //     //         {
+    //     //             Array1D<double> Uhh(m_varNum);
+    //     //             for (int r = 0; r != m_varNum; r++)
+    //     //                 Uhh[r] = m_worldUh[ei][ej].vector[r];
+
+    //     //             outputFile << m_worldGrids[ei][ej].m_xCenter << " ";
+    //     //             outputFile << m_worldGrids[ei][ej].m_yCenter << " ";
+
+    //     //             for (int k = 0; k != VitalVarNum; k++)
+    //     //                 outputFile << VitalVar[k] << " ";
+    //     //             outputFile << std::endl;
+    //     //         }
+    //     //     }
+
+    //     //     outputFile.close();
+    //     // }
+    //     // else
+    //     // {
+    //     //     std::cout << "Unable to open file" << std::endl;
+    //     // }
+    //     // logMessage("The file " + filename + " has been output successfully...");
+    // }
+
+    // 每个守恒变量单独输出一个 txt 文件
+    if (m_rank == 0)
+    {
+        for (int r = 0; r != m_varNum; ++r)
+        {
+            std::string filename = m_outputDir + "debug_" + prefix + "_var" + std::to_string(r) + ".txt";
+            std::ofstream outputFile(filename);
+
+            if (outputFile.is_open())
+            {
+                outputFile << std::setprecision(15) << std::setw(20) << std::setiosflags(std::ios::scientific);
+                for (int ei = m_ghostCellNum; ei != m_worldPointNumX + m_ghostCellNum; ei++)
+                {
+                    for (int ej = m_ghostCellNum; ej != m_worldPointNumY + m_ghostCellNum; ej++)
+                    {
+                        outputFile << m_worldGrids[ei][ej].m_xCenter << " " << m_worldGrids[ei][ej].m_yCenter << " " << m_worldUh[ei][ej].vector[r] << " ";
+                        outputFile << std::endl;
+                    }
+                }
+
+                outputFile.close();
+            }
+            else
+            {
+                std::cout << "Unable to open file" << std::endl;
+            }
+        }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    // m_outputTimer.pause();
 }

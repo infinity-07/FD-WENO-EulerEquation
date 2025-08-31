@@ -51,6 +51,8 @@ public:
     int m_totalPointNumX, m_totalPointNumY;
     int m_worldStartPointX, m_worldStartPointY;
     int m_worldEndPointX, m_worldEndPointY;
+    std::vector<int> m_numPointsX_per_rank;  // 储存每个线程的 X 方向点数
+    std::vector<int> m_startPointX_per_rank; // 储存每个线程的 X 方向起始点索引
 
     double m_globalXL, m_globalXR, m_globalYL, m_globalYR;
     double m_deltaX, m_deltaY;
@@ -107,6 +109,8 @@ public:
 
     void setBoundary(void);
     void exchangeGhostCellsValue(void);
+
+    void debugOutput(const std::string &prefix);
 
 public:
     void RunRK1(double deltaT);

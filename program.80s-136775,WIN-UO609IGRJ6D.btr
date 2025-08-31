@@ -1,0 +1,13 @@
+
+program:136775 terminated with signal 6 at PC=76adfea969fc SP=7ffc0e58b3e0.  Backtrace:
+/lib/x86_64-linux-gnu/libc.so.6(pthread_kill+0x12c)[0x76adfea969fc]
+/lib/x86_64-linux-gnu/libc.so.6(raise+0x16)[0x76adfea42476]
+/lib/x86_64-linux-gnu/libc.so.6(abort+0xd3)[0x76adfea287f3]
+/lib/x86_64-linux-gnu/libc.so.6(+0x2871b)[0x76adfea2871b]
+/lib/x86_64-linux-gnu/libc.so.6(+0x39e96)[0x76adfea39e96]
+./bin/program(+0x1062a)[0x636e4c1d762a]
+./bin/program(+0x18199)[0x636e4c1df199]
+./bin/program(+0x7005)[0x636e4c1ce005]
+/lib/x86_64-linux-gnu/libc.so.6(+0x29d90)[0x76adfea29d90]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x80)[0x76adfea29e40]
+./bin/program(+0x72d5)[0x636e4c1ce2d5]
