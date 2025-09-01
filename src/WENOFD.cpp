@@ -33,7 +33,7 @@ void CWENOFD::initializeSolver(std::map<std::string, std::string> option)
     m_scheme = (SCHEMETYPE)std::stoi(option["SCHEME"]);
     m_cfl = std::stod(option["CFL"]);
 
-    m_ghostCellNum = 3;
+    m_ghostCellNum = 4;
 
     // Initialize number of elements in X and Y directions
     m_worldPointNumX = std::stoi(option["ELEMNUMX"]);
@@ -502,32 +502,6 @@ void CWENOFD::assembleBoundaryTerm(void)
         for (int ei = 0; ei != m_totalPointNumX; ei++)
         {
             equation->fluxSplitX(m_Uh[ei][ej].vector, loc_flux_minus, loc_flux_plus);
-            Array1D<double> loc_flux_minus1(m_varNum), loc_flux_plus1(m_varNum);
-            equation->fluxSplit(m_Uh[ei][ej].vector, 1, 0, loc_flux_minus1, loc_flux_plus1);
-
-            double diff = 0;
-            for (int r = 0; r != m_varNum; r++)
-                diff += abs(loc_flux_minus1[r] - loc_flux_minus[r]) + abs(loc_flux_plus[r] - loc_flux_plus1[r]);
-            if (diff > 1e-6)
-            {
-                std::cout << "WARNING: fluxSplitX 和 fluxSplit 结果不一致 (总差异: " << diff << ")\n";
-
-                // 输出每个分量的详细差异
-                std::cout << "Index\tfluxSplitX_minus\tfluxSplit_minus\t差值\t|\tfluxSplitX_plus\tfluxSplit_plus\t差值\n";
-                for (int r = 0; r != m_varNum; r++)
-                {
-                    double minus_diff = std::abs(loc_flux_minus1[r] - loc_flux_minus[r]);
-                    double plus_diff = std::abs(loc_flux_plus[r] - loc_flux_plus1[r]);
-
-                    std::cout << r << "\t"
-                              << loc_flux_minus[r] << "\t" << loc_flux_minus1[r] << "\t" << minus_diff << "\t|\t"
-                              << loc_flux_plus[r] << "\t" << loc_flux_plus1[r] << "\t" << plus_diff << "\n";
-                }
-
-                // 可以在这里添加调试断点或异常处理
-                // throw std::runtime_error("fluxSplit 结果不一致");
-                std::cin.get();
-            }
 
             for (int r = 0; r != m_varNum; ++r)
             {

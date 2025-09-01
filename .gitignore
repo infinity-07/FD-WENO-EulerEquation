@@ -1,6 +1,7 @@
 # 忽略 output/ 下的所有文件，但保留 .gitkeep
 output/*
 !output/.gitkeep
+!output/.ipynb
 
 # 忽略所有 .o 文件
 *.o
