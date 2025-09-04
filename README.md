@@ -26,6 +26,7 @@
 - [ ] outputave 增加一个参数，运行输出ghost单元的值用于检查
 - [ ] 搞清楚现在的m_Uh是不是连续储存，如果不是，二维可变长数组嵌套一个不可变长数组是不是连续储存
 - [ ] WENO5ZPI 等格式有振荡，需要debug
+- [ ] 增加一个debug模式，在非debug模式下减少输出，最大化优化计算时间
 
 ## 📁 文件结构
 ```
@@ -129,6 +130,7 @@ mpirun -np 4 ./bin/program
 如需协助或合作，请联系作者：
 
 邮箱: cauzhangyang@outlook.com
+
 
 
 
