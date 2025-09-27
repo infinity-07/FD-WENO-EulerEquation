@@ -184,8 +184,9 @@ void CWENOFD::initializeAve(void)
                 m_Uh[ei][ej].vector[r] = Conserved_var[r];
         }
     }
+
     if (m_rank == 0)
-        std::cout << "Cell averages initialization completed..." << std::endl;
+        std::cout << "Grid values initialization completed..." << std::endl;
 
     m_initialiTimer.pause();
 }
@@ -200,16 +201,16 @@ void CWENOFD::run(std::map<std::string, std::string> option)
     double deltaT(0);
     double end_time;
 
-    // Runge-Kutta iteration
-    if (m_rank == 0)
-        std::cout << "Start iteration..." << std::endl;
-
     m_solverTimer.start();
 
     initializeAve();
 
     outputAve("initial");
-    debugOutput("initial");
+    // debugOutput("initial");
+
+    // Runge-Kutta iteration
+    if (m_rank == 0)
+        std::cout << "Start iteration..." << std::endl;
 
     m_mainTimer.start();
 
@@ -249,13 +250,33 @@ void CWENOFD::run(std::map<std::string, std::string> option)
             // showProgressBar(equation->outputtime, m_now, end_time - m_start_time);
 
             if (count % 20 == 1)
+            {
+                double progress = m_now / m_outputTime;
+                int barWidth = 50; // 进度条宽度
+                int pos = static_cast<int>(progress * barWidth);
+
                 std::cout << std::fixed << std::setprecision(2)
                           << "Iteration count: " << count
                           << std::scientific << std::setprecision(2)
-                          << " DeltaT: " << deltaT
+                          << ", DeltaT: " << deltaT
                           << std::fixed << std::setprecision(2)
-                          << " Elapsed time: " << end_time - m_start_time
-                          << " seconds" << std::endl;
+                          << ", Elapsed time: " << end_time - m_start_time
+                          << " seconds"
+                          << ", Progress: " << m_now << "/" << m_outputTime
+                          << " (" << (progress * 100.0) << "%)"
+                          << " [";
+
+                for (int i = 0; i < barWidth; ++i)
+                {
+                    if (i < pos)
+                        std::cout << "="; // 已完成部分
+                    else if (i == pos)
+                        std::cout << ">"; // 当前进度标记
+                    else
+                        std::cout << " "; // 未完成部分
+                }
+                std::cout << "]" << std::endl;
+            }
         }
 
         // Output average values every 1000 iterations
@@ -270,7 +291,7 @@ void CWENOFD::run(std::map<std::string, std::string> option)
     m_mainTimer.pause();
 
     outputAve("final");
-    debugOutput("final");
+    // debugOutput("final");
 
     if (equation->u_exact_exist)
     {
@@ -397,7 +418,7 @@ double CWENOFD::calculateDeltaT()
     {
         for (int ej = m_startPointY; ej != m_endPointY; ej++)
         {
-            // Extract average solution values for the cell
+            // Extract solution values at grid points
             for (int r = 0; r != m_varNum; ++r)
                 loc_Uh[r] = m_Uh[ei][ej].vector[r];
 
@@ -1160,7 +1181,7 @@ void CWENOFD::outputAve(std::string prefix)
     // output
     if (m_rank == 0)
     {
-        logMessage("outputing average solution...");
+        std::cout << "outputing average solution..." << std::endl;
 
         const int VitalVarNum = equation->getVitalVarNum();
         Array1D<double> VitalVar(VitalVarNum);
@@ -1217,7 +1238,7 @@ void CWENOFD::outputAve(std::string prefix)
         {
             std::cout << "Unable to open file" << std::endl;
         }
-        logMessage("The file " + filename + " has been output successfully...");
+        std::cout << "The file " + filename + " has been output successfully..." << std::endl;
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -1235,7 +1256,7 @@ void CWENOFD::outputError(std::string prefix)
     // output
     if (m_rank == 0)
     {
-        logMessage("outputing average solution...");
+        std::cout << "outputing average solution..." << std::endl;
 
         int VitalVarNum = equation->getVitalVarNum();
         Array1D<double> VitalVar(VitalVarNum);
@@ -1287,7 +1308,7 @@ void CWENOFD::outputError(std::string prefix)
         {
             std::cout << "Unable to open file" << std::endl;
         }
-        logMessage("The file " + filename + " has been output successfully...");
+        std::cout << "The file " + filename + " has been output successfully..." << std::endl;
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -1371,7 +1392,6 @@ void CWENOFD::outputAccuracy(std::string prefix)
         fileout << std::setprecision(15) << std::setw(20) << std::setiosflags(std::ios::scientific) << err1Sum << ", ";
         fileout << std::setprecision(15) << std::setw(20) << std::setiosflags(std::ios::scientific) << err2Sum;
 
-        fileout << std::endl;
         fileout.close();
         std::cout << "Accuracy verification completed..." << std::endl;
     }

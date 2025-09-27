@@ -420,7 +420,7 @@ public:
 			xR = 2.0;
 			yL = 0.0;
 			yR = 2.0;
-			outputtime = 0.1;
+			outputtime = 1.0;
 			leftBoundaryCondition = PERIOD;
 			rightBoundaryCondition = PERIOD;
 			topBoundaryCondition = PERIOD;
