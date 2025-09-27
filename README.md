@@ -40,13 +40,7 @@
 │   ├── main.d
 │   └── main.o
 ├── docs
-│   ├── main.aux
-│   ├── main.log
-│   ├── main.out
-│   ├── main.pdf
-│   ├── main.synctex.gz
-│   ├── main.tex
-│   └── main.toc
+│   └── main.tex
 ├── include
 │   ├── Utility.hpp
 │   └── WENOFD.hpp
@@ -141,6 +135,7 @@ mpirun -np 4 ./bin/program
 如需协助或合作，请联系作者：
 
 邮箱: cauzhangyang@outlook.com
+
 
 
 
