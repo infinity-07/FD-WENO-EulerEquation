@@ -63,7 +63,7 @@
 
 ## 部分计算结果展示
 ### 算例0
-cfl = 0.05, 
+CFL = 0.05, 
 | N   | Linf (JS) | order (JS) | L1 (JS)  | order (JS) | Linf (Z) | order (Z) | L1 (Z)   | order (Z) |
 | --- | --------- | ---------- | -------- | ---------- | -------- | --------- | -------- | --------- |
 | 100 | 6.42E-07  |            | 1.92E-07 |            | 1.66E-07 |           | 4.21E-08 |           |
@@ -72,6 +72,12 @@ cfl = 0.05,
 | 160 | 5.81E-08  | -5.24  | 1.74E-08 | -5.11  | 1.56E-08 | 5.03      | 3.95E-09 | 5.03      |
 | 180 | 3.12E-08  | -5.27  | 9.53E-09 | -5.13  | 8.65E-09 | 5.02      | 2.19E-09 | 5.03      |
 | 200 | 1.78E-08  | -5.33  | 5.55E-09 | -5.14  | 5.10E-09 | 5.02      | 1.29E-09 | 5.02      |
+
+### 算例2
+CFL = 0.7, NxN = 800x800
+
+<img width="400" height="400" alt="WENOJS" src="https://github.com/user-attachments/assets/c64a047d-ceee-4a89-83f0-afdffdb43104" />
+<img width="400" height="400" alt="WENOZ" src="https://github.com/user-attachments/assets/bc7eecc5-c785-4187-a8f3-6ab192d71e8e" />
 
 
 
@@ -135,6 +141,7 @@ mpirun -np 4 ./bin/program
 如需协助或合作，请联系作者：
 
 邮箱: cauzhangyang@outlook.com
+
 
 
 
