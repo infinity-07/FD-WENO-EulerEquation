@@ -1430,7 +1430,8 @@ void CWENOFD::backupProjectFiles()
         {"./include", codeOutputDir / "include"},
         {"./src", codeOutputDir / "src"},
         {"./makefile", codeOutputDir / "makefile"},
-        {"./third_party", codeOutputDir / "third_party"}};
+        {"./third_party", codeOutputDir / "third_party"},
+        {"./input", codeOutputDir / "input"}};
 
     // 执行复制操作
     for (const auto &[src, dst] : dirsToCopy)
