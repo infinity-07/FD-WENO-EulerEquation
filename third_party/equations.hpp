@@ -7,15 +7,15 @@ enum RIEMANNFLUXTYPE
 };
 enum SCHEMETYPE
 {
-	WENO = 0,
+	WENOJS = 0,
 	WENOZ = 1,
 	WENOZP = 2,
 	WENOZPI = 3
 };
 // 使用 inline 定义字符串数组
 inline const std::string SCHEMETYPE_STRINGS[] = {
-	"WENO",	 // SCHEMETYPE::WENO
-	"WENOZ", // SCHEMETYPE::WENOZ
+	"WENOJS", // SCHEMETYPE::WENO
+	"WENOZ",  // SCHEMETYPE::WENOZ
 	"WENOZP",
 	"WENOZPI",
 };

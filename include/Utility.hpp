@@ -456,9 +456,9 @@ inline double WENO5threconstruction(double uavemm, double uavem, double uave, do
     w2 = w2 / sum;
 
     // p(x)
-    double h0 = 1.0 / 3.0 * uavemm - 7.0 / 6.0 * uavem + 11.0 / 6.0 * uave;
-    double h1 = -1.0 / 6 * uavem + 5.0 / 6.0 * uave + 1.0 / 3.0 * uavep;
-    double h2 = 1.0 / 3.0 * uave + 5.0 / 6.0 * uavep - 1.0 / 6.0 * uavepp;
+    const double h0 = 1.0 / 3.0 * uavemm - 7.0 / 6.0 * uavem + 11.0 / 6.0 * uave;
+    const double h1 = -1.0 / 6 * uavem + 5.0 / 6.0 * uave + 1.0 / 3.0 * uavep;
+    const double h2 = 1.0 / 3.0 * uave + 5.0 / 6.0 * uavep - 1.0 / 6.0 * uavepp;
 
     return w0 * h0 + w1 * h1 + w2 * h2;
 }
@@ -535,8 +535,8 @@ inline double WENO5ZPtheconstruction(double uavemm, double uavem, double uave, d
     tmp2 = (3 * uave - 4 * uavep + uavepp);
     betap = 13.0 / 12.0 * tmp1 * tmp1 + 0.25 * tmp2 * tmp2;
 
-    double tau = fabs(betam - betap);
-    double lambda = pow(deltaX, 2 / 3);
+    const double tau = fabs(betam - betap);
+    const double lambda = pow(deltaX, 2 / 3);
 
     // use linear weights
     d0 = 0.1;

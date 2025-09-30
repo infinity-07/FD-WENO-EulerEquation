@@ -168,7 +168,7 @@ void CWENOFD::initializeAve(void)
     Array1D<double> Conserved_var(m_varNum);
 
     if (m_rank == 0)
-        std::cout << "Initializing cell averages..." << std::endl;
+        std::cout << "Initializing grid point values..." << std::endl;
 
     for (int ei = m_startPointX; ei != m_endPointX; ++ei)
     {
@@ -176,17 +176,13 @@ void CWENOFD::initializeAve(void)
         {
             m_Uh[ei][ej].vector.setZero();
 
-            // Get the initial conserved variables at the Gauss point
+            // Get the initial conserved variables at the center of the cell
             equation->getU0(m_grids[ei][ej].m_xCenter, m_grids[ei][ej].m_yCenter, Conserved_var);
 
-            // Normalize by the cell area to get the average value
             for (int r = 0; r != m_varNum; ++r)
                 m_Uh[ei][ej].vector[r] = Conserved_var[r];
         }
     }
-
-    if (m_rank == 0)
-        std::cout << "Grid values initialization completed..." << std::endl;
 
     m_initialiTimer.pause();
 }
@@ -834,7 +830,7 @@ double CWENOFD::useWENO(double &uavemm, double &uavem, double &uave, double &uav
     double u_hat(0);
     switch (m_scheme)
     {
-    case WENO:
+    case WENOJS:
         u_hat = WENO5threconstruction(uavemm, uavem, uave, uavep, uavepp);
         break;
     case WENOZ:
@@ -1181,7 +1177,7 @@ void CWENOFD::outputAve(std::string prefix)
     // output
     if (m_rank == 0)
     {
-        std::cout << "outputing average solution..." << std::endl;
+        std::cout << "Outputting solution at grid points..." << std::endl;
 
         const int VitalVarNum = equation->getVitalVarNum();
         Array1D<double> VitalVar(VitalVarNum);
@@ -1192,7 +1188,7 @@ void CWENOFD::outputAve(std::string prefix)
         equation->getVitalVarName(VitalVarName);
 
         // Output file name
-        std::string filename = m_outputDir + "average_" + prefix + ".plt";
+        std::string filename = m_outputDir + "solution_" + prefix + ".plt";
         std::ofstream outputFile(filename);
 
         if (outputFile.is_open())
@@ -1256,7 +1252,7 @@ void CWENOFD::outputError(std::string prefix)
     // output
     if (m_rank == 0)
     {
-        std::cout << "outputing average solution..." << std::endl;
+        std::cout << "Outputting solution at grid points..." << std::endl;
 
         int VitalVarNum = equation->getVitalVarNum();
         Array1D<double> VitalVar(VitalVarNum);
@@ -1326,7 +1322,7 @@ void CWENOFD::outputAccuracy(std::string prefix)
     double Uref(0);
     double err_1(0), err_2(0), err_inf(0);
 
-    // Compute exact solution averages over each cell
+    // Compute exact solution at each grid point
     Uexact.setZero();
     for (int ei = m_startPointX; ei != m_endPointX; ei++)
     {
@@ -1364,7 +1360,7 @@ void CWENOFD::outputAccuracy(std::string prefix)
     MPI_Allreduce(&err_inf, &errinfMax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
 
-    // Calculate average error norms
+    // Calculate error norms
     err1Sum = err1Sum / m_worldPointNumX / m_worldPointNumY;
     err2Sum = sqrt(err2Sum / m_worldPointNumX / m_worldPointNumY);
 
@@ -1376,16 +1372,9 @@ void CWENOFD::outputAccuracy(std::string prefix)
 
         // Open file for writing
         std::ifstream fileExists(filename.c_str());
-        if (fileExists)
-            // File exists, append data
-            fileout.open(filename.c_str(), std::ios::out | std::ios::app);
-        else
-        {
-            // File doesn't exist, create a new file and write header
-            fileout.open(filename.c_str(), std::ios::out);
-            fileout << "Accuracy file does not exist, created new file..." << std::endl;
-            fileout << "elemNum, Linf-norm (rho), L1-norm (rho), L2-norm (rho)" << std::endl;
-        }
+
+        fileout.open(filename.c_str(), std::ios::out);
+        fileout << "elemNum, Linf-norm (rho), L1-norm (rho), L2-norm (rho)" << std::endl;
 
         fileout << m_worldPointNumX << ", ";
         fileout << std::setprecision(15) << std::setw(20) << std::setiosflags(std::ios::scientific) << errinfMax << ", ";
@@ -1405,13 +1394,13 @@ inline void copyDirectory(const std::filesystem::path &src, const std::filesyste
         std::filesystem::copy(src, dst,
                               std::filesystem::copy_options::recursive |
                                   std::filesystem::copy_options::overwrite_existing);
-        // std::filesystem::copy_options::recursive 当复制源是目录时，递归复制其所有内容
-        // std::filesystem::copy_options::overwrite_existing 目标文件已存在时直接覆盖
-        std::cout << "复制成功: " << src << " -> " << dst << std::endl;
+        // std::filesystem::copy_options::recursive: when the source is a directory, copy all contents recursively
+        // std::filesystem::copy_options::overwrite_existing: overwrite destination files if they already exist
+        std::cout << "Copy succeeded: " << src << " -> " << dst << std::endl;
     }
     catch (const std::filesystem::filesystem_error &e)
     {
-        std::cerr << "错误: " << e.what() << std::endl;
+        std::cerr << "Error: " << e.what() << std::endl;
     }
 }
 
@@ -1465,7 +1454,7 @@ void CWENOFD::debugOutput(const std::string &prefix)
     //     logMessage("outputing average solution...");
 
     //     // Output file name
-    //     // std::string filename = m_outputDir + "average_" + prefix + ".plt";
+    //     // std::string filename = m_outputDir + "solution_" + prefix + ".plt";
     //     // std::ofstream outputFile(filename);
 
     //     // if (outputFile.is_open())

@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
 
     // ---------------- Reading Configuration File - --------------//
     if (world_rank == 0)
-        std::cout << "Starting to read configuration file......" << std::endl;
+        std::cout << "Starting to read configuration file..." << std::endl;
 
     CConfig config(inputfile);
     std::map<std::string, std::string> option;
