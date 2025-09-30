@@ -78,7 +78,7 @@ CFL = 0.7, NxN = 800x800
 
 <img width="400" height="400" alt="WENOJS" src="https://github.com/user-attachments/assets/c64a047d-ceee-4a89-83f0-afdffdb43104" />
 <img width="400" height="400" alt="WENOZ" src="https://github.com/user-attachments/assets/bc7eecc5-c785-4187-a8f3-6ab192d71e8e" />
-
+左图为 WENOJS 格式，右图为 WENOZ 格式
 
 
 ## 🚀 运行方式
@@ -141,6 +141,7 @@ mpirun -np 4 ./bin/program
 如需协助或合作，请联系作者：
 
 邮箱: cauzhangyang@outlook.com
+
 
 
 
