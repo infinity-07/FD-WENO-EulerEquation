@@ -345,7 +345,6 @@ public:
 
 		for (int r = 0; r != varNum; ++r)
 			Flux[r] = 0.5 * (FUL[r] + FUR[r] - ws * (UR[r] - UL[r]));
-		}
 	}
 
 	inline void fluxSplit(const Array1D<double> &uh, double nx, double ny, Array1D<double> &flux_minus, Array1D<double> &flux_plus)

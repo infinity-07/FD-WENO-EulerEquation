@@ -656,7 +656,7 @@ void CWENOFD::assembleBoundaryTerm(void)
         for (int ej = 0; ej != m_totalPointNumY; ej++)
         {
             // y 方向 unit normal: (0,1)
-            equation->fluxSplit(m_Uh[ei][ej].vector, 0, 1, loc_flux_minus, loc_flux_plus);
+            equation->fluxSplitY(m_Uh[ei][ej].vector, loc_flux_minus, loc_flux_plus);
 
             for (int r = 0; r != m_varNum; ++r)
             {
