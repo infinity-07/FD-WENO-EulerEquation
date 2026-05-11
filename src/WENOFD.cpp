@@ -230,9 +230,8 @@ void CWENOFD::run(std::map<std::string, std::string> option)
             RunRK3(deltaT);
             break;
         default:
-            std::cout << "Error: Invalid Runge-Kutta method" << std::endl;
-            std::cin.get();
-            exit(1);
+            std::cerr << "Error: Invalid Runge-Kutta method" << std::endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
         }
 
         // Update current time and count iterations
@@ -338,9 +337,8 @@ void CWENOFD::RunRK2(double deltaT)
             c = 0.5;
             break;
         default:
-            std::cout << "Error: Invalid RK2 step" << std::endl;
-            std::cin.get();
-            exit(1);
+            std::cerr << "Error: Invalid RK2 step" << std::endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
             break;
         }
 
@@ -384,9 +382,8 @@ void CWENOFD::RunRK3(double deltaT)
             c = 2.0 / 3.0;
             break;
         default:
-            std::cout << "Error: Invalid RK3 step" << std::endl;
-            std::cin.get();
-            exit(1);
+            std::cerr << "Error: Invalid RK3 step" << std::endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
             break;
         }
 
@@ -440,9 +437,8 @@ double CWENOFD::calculateDeltaT()
     // Check for NaN timestep
     if (timestep != timestep)
     {
-        std::cout << "Error: Timestep is not a number..." << std::endl;
-        std::cin.get();
-        exit(1);
+        std::cerr << "Error: Timestep is not a number..." << std::endl;
+        MPI_Abort(MPI_COMM_WORLD, 1);
     }
 
     // Obtain the minimum timestep across all processes using MPI_Reduce
@@ -843,9 +839,8 @@ double CWENOFD::useWENO(double &uavemm, double &uavem, double &uave, double &uav
         u_hat = WENO5ZPItheconstruction(uavemm, uavem, uave, uavep, uavepp);
         break;
     default:
-        std::cout << "the scheme is not supported" << std::endl;
-        std::cin.get();
-        break;
+        std::cerr << "the scheme is not supported" << std::endl;
+        MPI_Abort(MPI_COMM_WORLD, 1);
     }
     // m_wenoTimer.pause();
 

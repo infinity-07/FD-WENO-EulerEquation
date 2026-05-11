@@ -1,6 +1,7 @@
 #ifndef _SCTOOL_H_
 #define _SCTOOL_H_
 
+#include <mpi.h>
 #include "array.h"
 #include "timer.hpp"
 #include "newCommon.h"

@@ -47,8 +47,7 @@ inline double WENO5threconstruction(double uavemm, double uavem, double uave, do
     default:
         std::cout << gp_num << std::endl;
         std::cout << "check the gauss points for weno reconstruction!" << std::endl;
-        std::cin.get();
-        exit(1);
+        MPI_Abort(MPI_COMM_WORLD, 1);
     }
 
     // use nonlinear weights
@@ -101,8 +100,7 @@ inline double WENO5threconstruction(double uavemm, double uavem, double uave, do
         break;
     default:
         std::cout << "Check the Gauss points for WENO reconstruction!" << std::endl;
-        std::cin.get();
-        exit(1);
+        MPI_Abort(MPI_COMM_WORLD, 1);
     }
 
     ph = w0 * h0 + w1 * h1 + w2 * h2;
@@ -160,8 +158,7 @@ inline double WENO5Zthreconstruction(double uavemm, double uavem, double uave, d
     default:
         std::cout << gp_num << std::endl;
         std::cout << "check the gauss points for weno reconstruction!" << std::endl;
-        std::cin.get();
-        exit(1);
+        MPI_Abort(MPI_COMM_WORLD, 1);
     }
 
     // wenoz
@@ -202,8 +199,7 @@ inline double WENO5Zthreconstruction(double uavemm, double uavem, double uave, d
         break;
     default:
         std::cout << "Check the Gauss points for WENO reconstruction!" << std::endl;
-        std::cin.get();
-        exit(1);
+        MPI_Abort(MPI_COMM_WORLD, 1);
     }
 
     ph = w0 * p0 + w1 * p1 + w2 * p2;
@@ -264,8 +260,7 @@ inline double WENO5ZPtheconstruction(double uavemm, double uavem, double uave, d
     default:
         std::cout << gp_num << std::endl;
         std::cout << "check the gauss points for weno reconstruction!" << std::endl;
-        std::cin.get();
-        exit(1);
+        MPI_Abort(MPI_COMM_WORLD, 1);
     }
 
     // wenozp
@@ -305,8 +300,7 @@ inline double WENO5ZPtheconstruction(double uavemm, double uavem, double uave, d
         break;
     default:
         std::cout << "Check the Gauss points for WENO reconstruction!" << std::endl;
-        std::cin.get();
-        exit(1);
+        MPI_Abort(MPI_COMM_WORLD, 1);
     }
 
     ph = w0 * p0 + w1 * p1 + w2 * p2;
@@ -370,8 +364,7 @@ inline double WENO5ZPItheconstruction(double uavemm, double uavem, double uave, 
     default:
         std::cout << gp_num << std::endl;
         std::cout << "check the gauss points for weno reconstruction!" << std::endl;
-        std::cin.get();
-        exit(1);
+        MPI_Abort(MPI_COMM_WORLD, 1);
     }
 
     // wenozpi
@@ -411,8 +404,7 @@ inline double WENO5ZPItheconstruction(double uavemm, double uavem, double uave, 
         break;
     default:
         std::cout << "Check the Gauss points for WENO reconstruction!" << std::endl;
-        std::cin.get();
-        exit(1);
+        MPI_Abort(MPI_COMM_WORLD, 1);
     }
 
     ph = w0 * p0 + w1 * p1 + w2 * p2;
@@ -536,7 +528,7 @@ inline double WENO5ZPtheconstruction(double uavemm, double uavem, double uave, d
     betap = 13.0 / 12.0 * tmp1 * tmp1 + 0.25 * tmp2 * tmp2;
 
     const double tau = fabs(betam - betap);
-    const double lambda = pow(deltaX, 2 / 3);
+    const double lambda = pow(deltaX, 2.0 / 3.0);
 
     // use linear weights
     d0 = 0.1;
