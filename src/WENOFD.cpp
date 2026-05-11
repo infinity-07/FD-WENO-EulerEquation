@@ -1311,8 +1311,8 @@ void CWENOFD::outputAccuracy(std::string prefix)
         std::cout << "Verifying accuracy..." << std::endl;
 
     // Arrays to store exact solution and error
-    Array2D<double> Uexact(m_totalPointNumX + 2 * m_ghostCellNum, m_totalPointNumY + 2 * m_ghostCellNum);
-    Array2D<double> Uerr(m_totalPointNumX + 2 * m_ghostCellNum, m_totalPointNumY + 2 * m_ghostCellNum);
+    Array2D<double> Uexact(m_totalPointNumX, m_totalPointNumY);
+    Array2D<double> Uerr(m_totalPointNumX, m_totalPointNumY);
 
     double Uref(0);
     double err_1(0), err_2(0), err_inf(0);
