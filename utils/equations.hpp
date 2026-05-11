@@ -311,14 +311,8 @@ public:
 		getPhyFlux(UL, FUL, nx, ny);
 		getPhyFlux(UR, FUR, nx, ny);
 
-		// conservative variable
 		for (int r = 0; r != varNum; ++r)
-		{
-			Flux[0] = 0.5 * (FUL[0] + FUR[0] - ws * (UR[0] - UL[0]));
-			Flux[1] = 0.5 * (FUL[1] + FUR[1] - ws * (UR[1] - UL[1]));
-			Flux[2] = 0.5 * (FUL[2] + FUR[2] - ws * (UR[2] - UL[2]));
-			Flux[3] = 0.5 * (FUL[3] + FUR[3] - ws * (UR[3] - UL[3]));
-		}
+			Flux[r] = 0.5 * (FUL[r] + FUR[r] - ws * (UR[r] - UL[r]));
 	}
 
 	inline void getLLFRiemannFluxX(const Array1D<double> &UL, const Array1D<double> &UR, Array1D<double> &Flux)
@@ -333,14 +327,8 @@ public:
 		getPhyFluxX(UL, FUL);
 		getPhyFluxX(UR, FUR);
 
-		// conservative variable
 		for (int r = 0; r != varNum; ++r)
-		{
-			Flux[0] = 0.5 * (FUL[0] + FUR[0] - ws * (UR[0] - UL[0]));
-			Flux[1] = 0.5 * (FUL[1] + FUR[1] - ws * (UR[1] - UL[1]));
-			Flux[2] = 0.5 * (FUL[2] + FUR[2] - ws * (UR[2] - UL[2]));
-			Flux[3] = 0.5 * (FUL[3] + FUR[3] - ws * (UR[3] - UL[3]));
-		}
+			Flux[r] = 0.5 * (FUL[r] + FUR[r] - ws * (UR[r] - UL[r]));
 	}
 
 	inline void getLLFRiemannFluxY(const Array1D<double> &UL, const Array1D<double> &UR, Array1D<double> &Flux)
@@ -355,13 +343,8 @@ public:
 		getPhyFluxY(UL, FUL);
 		getPhyFluxY(UR, FUR);
 
-		// conservative variable
 		for (int r = 0; r != varNum; ++r)
-		{
-			Flux[0] = 0.5 * (FUL[0] + FUR[0] - ws * (UR[0] - UL[0]));
-			Flux[1] = 0.5 * (FUL[1] + FUR[1] - ws * (UR[1] - UL[1]));
-			Flux[2] = 0.5 * (FUL[2] + FUR[2] - ws * (UR[2] - UL[2]));
-			Flux[3] = 0.5 * (FUL[3] + FUR[3] - ws * (UR[3] - UL[3]));
+			Flux[r] = 0.5 * (FUL[r] + FUR[r] - ws * (UR[r] - UL[r]));
 		}
 	}
 
