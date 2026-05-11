@@ -2,7 +2,7 @@
 CC = mpicxx
 
 # 编译选项
-CFLAGS = -Wall -O4 -g
+CFLAGS = -Wall -O3 -march=native -g
 DEPFLAGS = -MMD -MP
 
 # 目录路径
