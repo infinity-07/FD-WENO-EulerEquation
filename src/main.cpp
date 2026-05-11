@@ -1,4 +1,4 @@
-#include "../third_party/scTools.h"
+#include "../utils/scTools.h"
 #include "../include/WENOFD.hpp"
 #include <mpi.h>
 

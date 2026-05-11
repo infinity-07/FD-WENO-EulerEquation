@@ -52,7 +52,7 @@
 ├── src
 │   ├── WENOFD.cpp
 │   └── main.cpp
-└── third_party
+└── utils
     ├── array.h
     ├── equations.hpp
     ├── newCommon.h

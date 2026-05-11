@@ -1,6 +1,6 @@
 #ifndef __UTILITY__HPP__
 #define __UTILITY__HPP__
-#include "../third_party/scTools.h"
+#include "../utils/scTools.h"
 
 constexpr double C1_3 = 1.0 / 3.0;
 constexpr double C1_4 = 1.0 / 4.0;
@@ -236,7 +236,7 @@ inline double WENO5ZPtheconstruction(double uavemm, double uavem, double uave, d
     betap = 13.0 / 12.0 * tmp1 * tmp1 + 0.25 * tmp2 * tmp2;
 
     double tau = fabs(betam - betap);
-    double lambda = pow(deltaX, 2 / 3);
+    double lambda = pow(deltaX, 2.0 / 3.0);
 
     // use linear weights
     switch (gp_num)

@@ -1,7 +1,7 @@
 #ifndef __WENOFV__HPP__
 #define __WENOFV__HPP__
 
-#include "../third_party/scTools.h"
+#include "../utils/scTools.h"
 
 enum RKMETHOD
 {

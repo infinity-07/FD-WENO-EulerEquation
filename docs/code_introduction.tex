@@ -1,0 +1,685 @@
+% !TEX program = xelatex
+\documentclass{article}
+\usepackage{ctex, fontenc}
+\usepackage{xcolor}
+\usepackage{booktabs, tabularx, multicol}
+\usepackage{framed}
+\usepackage{amsmath, amsthm, amssymb, amsfonts}
+\usepackage{bm}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue]{hyperref}
+\usepackage[paper=a4paper,text={146.6mm,244.1mm},top=27.5mm,left=31.7mm,head=6mm,headsep=6.5mm,foot=7.9mm]{geometry}
+\usepackage{appendix}
+\usepackage{subfig, graphicx}
+\usepackage{float}
+\usepackage{multirow}
+\usepackage{tikz}
+\usepackage{physics}
+
+% 代码高亮
+\usepackage{listings}
+\lstset{
+    language=C++,
+    basicstyle=\small\ttfamily,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{red!70!black},
+    numbers=left,
+    numbersep=5pt,
+    numberstyle=\tiny\color{gray},
+    frame=single,
+    breaklines=true,
+    tabsize=4,
+    keepspaces=true,
+}
+
+\newtheorem{example}{算例}
+\newtheorem{remark}{注}
+
+\title{\textbf{FD-WENO-EulerEquation 代码说明文档}\\
+\large 二维可压缩欧拉方程的高阶有限差分 WENO 求解器}
+\date{\today}
+\author{张阳}
+
+\numberwithin{equation}{section}
+\punctstyle{kaiming}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+%=============================================================================
+\section{程序概述}
+%=============================================================================
+
+本程序是一个面向二维可压缩欧拉方程的高精度有限差分数值求解器，采用
+加权本质无振荡（Weighted Essentially Non-Oscillatory，WENO）格式进行空间重构，
+并支持一至三阶强稳定保持 Runge-Kutta（SSP-RK）格式进行时间推进。
+程序基于 C++17 编写，利用 MPI 实现 $x$ 方向的区域分解并行计算，
+计算结果以 Tecplot 格式输出，便于可视化分析。
+
+\subsection{主要特性}
+
+\begin{itemize}
+    \item 支持四种 WENO 重构格式：WENO-JS、WENO-Z、WENO-ZP、WENO-ZPI；
+    \item 支持一至三阶 SSP-RK 时间推进；
+    \item 支持四类边界条件：周期（PERIOD）、滑移（SLIP）、对称（SYMMETRIC）、特殊（SPECIAL）；
+    \item 支持 MPI 并行，可无缝切换串行（1 进程）与并行模式；
+    \item 内置光滑算例误差评估，自动输出 $L^1$、$L^2$、$L^\infty$ 误差范数；
+    \item 每次运行自动创建带时间戳的输出目录并备份源代码。
+\end{itemize}
+
+\subsection{文件结构}
+
+\begin{verbatim}
+FD-WENO-EulerEquation/
+├── src/
+│   ├── main.cpp          主程序入口
+│   └── WENOFD.cpp        求解器核心实现
+├── include/
+│   ├── WENOFD.hpp        求解器类声明
+│   └── Utility.hpp       WENO 重构函数（内联实现）
+├── utils/
+│   ├── scTools.h         头文件集合（统一包含入口）
+│   ├── equations.hpp     欧拉方程定义（通量、特征矩阵等）
+│   ├── array.h           一维/二维数组类
+│   ├── readConfig.hpp    配置文件解析
+│   └── timer.hpp         层次化计时器
+├── input/
+│   └── config.cfg        运行参数配置文件
+├── output/               计算结果输出目录
+├── docs/                 文档目录
+└── makefile
+\end{verbatim}
+
+%=============================================================================
+\section{控制方程}
+%=============================================================================
+
+\subsection{二维可压缩欧拉方程}
+
+本程序求解的是带源项的二维可压缩欧拉方程，守恒形式为：
+\begin{equation}
+    \frac{\partial \mathbf{U}}{\partial t}
+    + \frac{\partial \mathbf{F}(\mathbf{U})}{\partial x}
+    + \frac{\partial \mathbf{G}(\mathbf{U})}{\partial y}
+    = \mathbf{S}(\mathbf{U}),
+\end{equation}
+其中守恒变量 $\mathbf{U}$、$x$ 方向通量 $\mathbf{F}$、$y$ 方向通量 $\mathbf{G}$ 及源项 $\mathbf{S}$ 分别为：
+\begin{equation}
+    \mathbf{U} = \begin{bmatrix} \rho \\ \rho u \\ \rho v \\ E \end{bmatrix},\quad
+    \mathbf{F} = \begin{bmatrix} \rho u \\ \rho u^2 + p \\ \rho uv \\ (E+p)u \end{bmatrix},\quad
+    \mathbf{G} = \begin{bmatrix} \rho v \\ \rho uv \\ \rho v^2 + p \\ (E+p)v \end{bmatrix},\quad
+    \mathbf{S} = \begin{bmatrix} 0 \\ 0 \\ \rho g \\ \rho v g \end{bmatrix}.
+\end{equation}
+这里 $\rho$ 为密度，$u$、$v$ 分别为 $x$、$y$ 方向速度分量，$E$ 为单位体积总能量，
+$p$ 为压强，$g$ 为重力加速度（仅 Rayleigh-Taylor 不稳定算例中启用）。
+系统由理想气体状态方程封闭：
+\begin{equation}
+    p = (\gamma - 1)\left(E - \frac{1}{2}\rho(u^2 + v^2)\right),
+\end{equation}
+比热比 $\gamma$ 视算例不同取 $1.4$ 或 $5/3$。
+
+\subsection{特征结构}
+
+欧拉方程是双曲型守恒律方程组。以 $x$ 方向为例，雅可比矩阵 $\partial \mathbf{F}/\partial \mathbf{U}$
+的特征值为 $\lambda = u-c,\, u,\, u,\, u+c$，其中声速 $c = \sqrt{\gamma p/\rho}$。
+引入辅助量
+\begin{equation}
+    B_1 = \frac{\gamma - 1}{c^2}, \quad B_2 = \frac{B_1(u^2+v^2)}{2}, \quad H = \frac{E+p}{\rho},
+\end{equation}
+则左特征矩阵（$L^x = (R^x)^{-1}$）和右特征矩阵 $R^x$ 为：
+\begin{equation}
+    L^x = \begin{bmatrix}
+        \dfrac{B_2 + u/c}{2} & -\dfrac{B_1 u + 1/c}{2} & -\dfrac{B_1 v}{2} & \dfrac{B_1}{2} \\[6pt]
+        v & 0 & -1 & 0 \\[6pt]
+        1 - B_2 & B_1 u & B_1 v & -B_1 \\[6pt]
+        \dfrac{B_2 - u/c}{2} & -\dfrac{B_1 u - 1/c}{2} & -\dfrac{B_1 v}{2} & \dfrac{B_1}{2}
+    \end{bmatrix},
+\end{equation}
+\begin{equation}
+    R^x = \begin{bmatrix}
+        1 & 0 & 1 & 1 \\
+        u-c & 0 & u & u+c \\
+        v & -1 & v & v \\
+        H - cu & -v & \dfrac{u^2+v^2}{2} & H + cu
+    \end{bmatrix}.
+\end{equation}
+$y$ 方向的特征矩阵 $L^y$、$R^y$ 形式类似，将 $u$ 和 $v$ 的角色互换，详见
+\texttt{equations.hpp} 中的 \texttt{getLEigenMatrixY} 和 \texttt{getREigenMatrixY}。
+
+%=============================================================================
+\section{空间离散——WENO 有限差分格式}
+%=============================================================================
+
+\subsection{方法框架}
+
+对方程作方法线（Method of Lines）半离散，在网格点 $(x_i, y_j)$ 处有：
+\begin{equation}
+    \frac{d \mathbf{U}_{i,j}}{d t} = -\frac{\hat{\mathbf{F}}_{i+1/2,j} - \hat{\mathbf{F}}_{i-1/2,j}}{\Delta x}
+    - \frac{\hat{\mathbf{G}}_{i,j+1/2} - \hat{\mathbf{G}}_{i,j-1/2}}{\Delta y} + \mathbf{S}_{i,j},
+\end{equation}
+其中 $\hat{\mathbf{F}}_{i+1/2,j}$ 和 $\hat{\mathbf{G}}_{i,j+1/2}$ 为界面处的数值通量，
+通过以下步骤计算（以 $x$ 方向为例）。
+
+\subsection{Lax-Friedrichs 通量分裂}
+
+在每个网格点处，利用局部 Lax-Friedrichs（LLF）分裂将物理通量 $\mathbf{F}$ 分解为正负两部分：
+\begin{equation}
+    \mathbf{F}^\pm_{i,j} = \frac{1}{2}\left(\mathbf{F}(\mathbf{U}_{i,j}) \pm \alpha^x_{i,j} \, \mathbf{U}_{i,j}\right),
+\end{equation}
+其中 $\alpha^x_{i,j} = |u_{i,j}| + c_{i,j}$ 为局部最大特征值。
+正通量 $\mathbf{F}^+$ 用左偏模板重构，负通量 $\mathbf{F}^-$ 用右偏模板重构（镜像输入实现）。
+
+\subsection{特征空间投影}
+
+在界面 $x_{i+1/2}$ 处，取两侧平均值 $\bar{\mathbf{U}}_{i+1/2}$ 计算左特征矩阵 $L^x$：
+\begin{equation}
+    \bar{\mathbf{U}}_{i+1/2} = \frac{1}{2}\left(\mathbf{U}_{i,j} + \mathbf{U}_{i+1,j}\right).
+\end{equation}
+将 5 点模板上的分裂通量投影到特征空间：
+\begin{equation}
+    \mathbf{v}^+_s = L^x \mathbf{F}^+_{i+s-1,j},\quad
+    \mathbf{v}^-_s = L^x \mathbf{F}^-_{i+s,j},\quad s = -2,-1,0,1,2.
+\end{equation}
+对每个特征分量独立进行 WENO 重构后，再用右特征矩阵 $R^x$ 将结果投影回物理空间：
+\begin{equation}
+    \hat{\mathbf{F}}_{i+1/2} = R^x \left(\hat{\mathbf{v}}^+_{i+1/2} + \hat{\mathbf{v}}^-_{i+1/2}\right).
+\end{equation}
+
+\subsection{五阶 WENO-JS 重构}
+
+给定 5 个模板值 $f_{j-2},\ldots,f_{j+2}$，三个三点子模板上的三阶插值多项式为：
+\begin{subequations}
+\begin{align}
+    \hat{f}^0_{j+1/2} &= \frac{1}{3}f_{j-2} - \frac{7}{6}f_{j-1} + \frac{11}{6}f_j, \\
+    \hat{f}^1_{j+1/2} &= -\frac{1}{6}f_{j-1} + \frac{5}{6}f_j + \frac{1}{3}f_{j+1}, \\
+    \hat{f}^2_{j+1/2} &= \frac{1}{3}f_j + \frac{5}{6}f_{j+1} - \frac{1}{6}f_{j+2}.
+\end{align}
+\end{subequations}
+各子模板上的平滑指标 $\beta_k$ 衡量局部解的振荡程度：
+\begin{subequations}
+\begin{align}
+    \beta_0 &= \frac{13}{12}(f_{j-2} - 2f_{j-1} + f_j)^2 + \frac{1}{4}(f_{j-2} - 4f_{j-1} + 3f_j)^2, \\
+    \beta_1 &= \frac{13}{12}(f_{j-1} - 2f_j + f_{j+1})^2 + \frac{1}{4}(f_{j-1} - f_{j+1})^2, \\
+    \beta_2 &= \frac{13}{12}(f_j - 2f_{j+1} + f_{j+2})^2 + \frac{1}{4}(3f_j - 4f_{j+1} + f_{j+2})^2.
+\end{align}
+\end{subequations}
+WENO-JS 的理想权重（右偏重构）为 $d_0 = 0.1,\, d_1 = 0.6,\, d_2 = 0.3$。
+非线性权重为：
+\begin{equation}
+    \omega_k = \frac{\tilde{\omega}_k}{\sum_{l=0}^2 \tilde{\omega}_l},\quad
+    \tilde{\omega}_k = \frac{d_k}{(\varepsilon + \beta_k)^2},\quad \varepsilon = 10^{-6}.
+\end{equation}
+最终重构值为：
+\begin{equation}
+    \hat{f}_{j+1/2} = \sum_{k=0}^2 \omega_k \hat{f}^k_{j+1/2}.
+\end{equation}
+
+\subsection{五阶 WENO-Z 重构}
+
+WENO-Z 格式\cite{borges2008}引入全局平滑指标：
+\begin{equation}
+    \tau_5 = |\beta_0 - \beta_2|,
+\end{equation}
+从而给出改进的非线性权重：
+\begin{equation}
+    \tilde{\omega}_k^Z = d_k\left(1 + \left(\frac{\tau_5}{\beta_k + \varepsilon}\right)^2\right),\quad \varepsilon = 10^{-20}.
+\end{equation}
+WENO-Z 在光滑区的非线性权重更接近理想权重，可降低非物理耗散。
+
+\subsection{五阶 WENO-ZP 重构}
+
+WENO-ZP 格式\cite{acker2016}在 WENO-Z 的基础上引入正则化项以避免在局部极值附近精度降阶：
+\begin{equation}
+    \tilde{\omega}_k^{ZP} = d_k\left(1 + \left(\frac{\tau_5 + \varepsilon}{\beta_k + \varepsilon}\right)^2
+    + \lambda\frac{\beta_k + \varepsilon}{\tau_5 + \varepsilon}\right),\quad \lambda = \Delta x^{2/3},\quad \varepsilon = 10^{-40}.
+\end{equation}
+
+\begin{remark}
+    当前代码中 $\lambda$ 的计算存在整数除法 Bug：
+    \texttt{pow(deltaX, 2/3)} 中 \texttt{2/3} 为整数除法，结果为 0，导致 $\lambda \equiv 1$。
+    应改为 \texttt{pow(deltaX, 2.0/3.0)}。
+\end{remark}
+
+\subsection{五阶 WENO-ZPI 重构}
+
+WENO-ZPI 格式\cite{luo2021}进一步引入间断探测因子 $\alpha$ 以增强激波分辨率：
+\begin{equation}
+    \alpha = 1 - \frac{\beta_{\min}}{\beta_{\max} + \varepsilon},\quad
+    \tilde{\omega}_k^{ZPI} = d_k\left(1 + \left(\frac{\tau_5}{\beta_k+\varepsilon}\right)^2
+    + \lambda\alpha \frac{\beta_k}{\beta_{\max}+\varepsilon}\right),\quad \lambda = 3.3.
+\end{equation}
+
+%=============================================================================
+\section{时间离散——SSP-RK 格式}
+%=============================================================================
+
+将半离散方程记为 $d\mathbf{U}/dt = \mathcal{L}(\mathbf{U})$，
+程序支持以下三种 SSP-RK 格式\cite{gottlieb2001}。
+
+\subsection{一阶 Euler 格式（RK1）}
+\begin{equation}
+    \mathbf{U}^{n+1} = \mathbf{U}^n + \Delta t\, \mathcal{L}(\mathbf{U}^n).
+\end{equation}
+
+\subsection{二阶 SSP-RK 格式（RK2）}
+\begin{subequations}
+\begin{align}
+    \mathbf{U}^{(1)} &= \mathbf{U}^n + \Delta t\, \mathcal{L}(\mathbf{U}^n), \\
+    \mathbf{U}^{n+1} &= \frac{1}{2}\mathbf{U}^n + \frac{1}{2}\left(\mathbf{U}^{(1)} + \Delta t\, \mathcal{L}(\mathbf{U}^{(1)})\right).
+\end{align}
+\end{subequations}
+
+\subsection{三阶 SSP-RK 格式（RK3）}
+\begin{subequations}
+\begin{align}
+    \mathbf{U}^{(1)} &= \mathbf{U}^n + \Delta t\, \mathcal{L}(\mathbf{U}^n), \\
+    \mathbf{U}^{(2)} &= \frac{3}{4}\mathbf{U}^n + \frac{1}{4}\left(\mathbf{U}^{(1)} + \Delta t\, \mathcal{L}(\mathbf{U}^{(1)})\right), \\
+    \mathbf{U}^{n+1} &= \frac{1}{3}\mathbf{U}^n + \frac{2}{3}\left(\mathbf{U}^{(2)} + \Delta t\, \mathcal{L}(\mathbf{U}^{(2)})\right).
+\end{align}
+\end{subequations}
+
+\subsection{CFL 时间步长}
+
+根据 CFL 条件，时间步长取全局最小值：
+\begin{equation}
+    \Delta t = \mathrm{CFL} \cdot \min_{i,j} \frac{1}{\dfrac{\lambda^x_{i,j}}{\Delta x} + \dfrac{\lambda^y_{i,j}}{\Delta y}},
+\end{equation}
+其中 $\lambda^x_{i,j} = |u_{i,j}| + c_{i,j}$，$\lambda^y_{i,j} = |v_{i,j}| + c_{i,j}$。
+程序通过 \texttt{MPI\_Reduce} 获取所有进程上的全局最小步长，并截断至输出时刻。
+
+%=============================================================================
+\section{程序整体流程}
+%=============================================================================
+
+\begin{algorithm}[H]
+\caption{FD-WENO-EulerEquation 主计算流程}
+\begin{algorithmic}[1]
+\State 读取配置文件 \texttt{config.cfg}，初始化方程参数与 MPI 通信域
+\State 初始化计算网格：沿 $x$ 方向按进程数均分，$y$ 方向不做分割
+\State 按初始条件赋初值 $\mathbf{U}^0_{i,j}$
+\State 输出初始解（\texttt{solution\_initial.plt}）
+\While{$|t - t_{\text{end}}| > 10^{-9}$}
+    \State 计算时间步长 $\Delta t$（CFL 条件 + MPI 全局归约）
+    \State 调用 \textbf{RunRKn}（$n=1,2,3$），内部循环：
+    \State \quad \textbf{exchangeGhostCellsValue}：向相邻进程交换 ghost 单元数据
+    \State \quad \textbf{setBoundary}：对 $y$ 方向及 $x$ 方向边界进程填充 ghost 单元
+    \State \quad \textbf{assembleBoundaryTerm}：通量分裂 $\to$ 特征投影 $\to$ WENO 重构 $\to$ 反投影
+    \State \quad \textbf{assembleSourceTerm}：对特定算例加入重力源项
+    \State $t \leftarrow t + \Delta t$
+\EndWhile
+\State 输出最终解（\texttt{solution\_final.plt}）
+\If{精确解已知}
+    \State 计算并输出 $L^1$、$L^2$、$L^\infty$ 误差（\texttt{accuracy\_final.csv}）
+    \State 输出误差分布图（\texttt{error\_final.plt}）
+\EndIf
+\State 打印各阶段计时报告
+\end{algorithmic}
+\end{algorithm}
+
+%=============================================================================
+\section{MPI 并行策略}
+%=============================================================================
+
+程序采用沿 $x$ 方向的一维区域分解。设共 $P$ 个 MPI 进程，
+第 $k$ 个进程负责全局 $x$ 索引范围 $[s_k, s_k + n_k)$ 的计算，
+其中 $n_k = \lfloor N_x/P \rfloor + (k < N_x \bmod P \;?\; 1 : 0)$。
+
+每个进程的局部数组包含 $n_k + 2g$ 列（$g=4$ 为 ghost 单元数），
+如图~\ref{fig:domain_decomp} 所示。
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=0.85]
+    % Rank 0
+    \fill[blue!15] (0,1) rectangle (1.5,2);
+    \draw[thick] (0,1) rectangle (1.5,2);
+    \node at (0.75,1.5) {\small ghost};
+
+    \fill[blue!30] (1.5,1) rectangle (4,2);
+    \draw[thick] (1.5,1) rectangle (4,2);
+    \node at (2.75,1.5) {\small Rank 0 内部};
+
+    \fill[blue!15] (4,1) rectangle (5.5,2);
+    \draw[thick] (4,1) rectangle (5.5,2);
+    \node at (4.75,1.5) {\small ghost};
+
+    % Rank 1
+    \fill[orange!15] (4,0) rectangle (5.5,1);
+    \draw[thick] (4,0) rectangle (5.5,1);
+    \node at (4.75,0.5) {\small ghost};
+
+    \fill[orange!30] (5.5,0) rectangle (8,1);
+    \draw[thick] (5.5,0) rectangle (8,1);
+    \node at (6.75,0.5) {\small Rank 1 内部};
+
+    \fill[orange!15] (8,0) rectangle (9.5,1);
+    \draw[thick] (8,0) rectangle (9.5,1);
+    \node at (8.75,0.5) {\small ghost};
+
+    % arrows
+    \draw[->, thick, blue] (4,1.5) -- (5.5,0.5) node[midway, right] {\small send};
+    \draw[->, thick, orange] (5.5,0.5) -- (4,1.5) node[midway, left] {\small send};
+\end{tikzpicture}
+\caption{$x$ 方向区域分解示意（每进程含 $g=4$ 列 ghost 单元）}
+\label{fig:domain_decomp}
+\end{figure}
+
+每个 RK 子步开始前，调用 \texttt{exchangeGhostCellsValue} 函数，
+通过非阻塞通信（\texttt{MPI\_Isend} / \texttt{MPI\_Irecv} + \texttt{MPI\_Waitall}）
+实现左右相邻进程间 ghost 单元的双向交换。
+对于周期边界条件，rank 0 的左邻进程为 rank $P-1$，天然实现了周期性。
+对于其他类型的边界条件，边界进程接收到的 ghost 值随后在 \texttt{setBoundary} 中被正确的边界条件覆盖。
+
+输出阶段通过 \texttt{GatherAllUhToRank0} 将所有进程的解汇聚到 rank 0，
+由 rank 0 统一写文件，避免并发写冲突。
+
+%=============================================================================
+\section{边界条件}
+%=============================================================================
+
+程序支持四种边界条件，可对四个方向（左、右、上、下）独立配置：
+
+\paragraph{周期边界（PERIOD）}
+$x$ 方向由 MPI 通信环形拓扑自动实现；$y$ 方向在 \texttt{setBoundary} 中显式镜像：
+\begin{equation}
+    U_{i, m_s - k} = U_{i, m_e - 1 - k}, \quad U_{i, m_e - 1 + k} = U_{i, m_s + k}, \quad k = 1,\ldots,g.
+\end{equation}
+
+\paragraph{对称边界（SYMMETRIC）}
+在 ghost 单元中镜像对称填充（无符号翻转），适用于对称初值问题的对称轴边界。
+
+\paragraph{滑移壁面边界（SLIP）}
+与对称边界相同，但法向动量分量取反：
+\begin{equation}
+    U^{\text{ghost}}[\text{法向动量}] = -U^{\text{interior}}[\text{法向动量}],
+\end{equation}
+用于无粘可压缩流动的固壁边界。
+
+\paragraph{特殊边界（SPECIAL）}
+直接用精确初值填充 ghost 单元，适用于具有已知入流/出流状态的边界。
+
+%=============================================================================
+\section{算例说明}
+%=============================================================================
+
+\subsection{算例 0：二维光滑问题（精度验证）}
+
+\begin{example}[精度测试]\label{ex:smooth}
+初值：
+\begin{equation}
+    (\rho, u, v, p)(x,y,0) = \bigl(1 + 0.2\sin(\pi(x+y)),\ 0.7,\ 0.3,\ 1\bigr),
+\end{equation}
+计算域 $[0,2]\times[0,2]$，四侧周期边界，$t_{\text{end}} = 1$。精确解为：
+\begin{equation}
+    \rho(x,y,t) = 1 + 0.2\sin(\pi(x + y - t)).
+\end{equation}
+\end{example}
+
+表~\ref{tab:accuracy} 给出了 WENO-Z 格式在不同网格上的收敛结果，验证了格式的五阶精度。
+
+\begin{table}[H]
+\centering
+\caption{WENO-Z 格式收敛性验证（CFL = 0.05，RK3，$t=1$）}
+\label{tab:accuracy}
+\begin{tabular}{ccccc}
+\toprule
+$N$ & $L^\infty$ 误差 & 阶数 & $L^1$ 误差 & 阶数 \\
+\midrule
+100 & 1.66E-07 & --- & 4.21E-08 & --- \\
+120 & 6.64E-08 & 5.03 & 1.68E-08 & 5.04 \\
+140 & 3.06E-08 & 5.03 & 7.73E-09 & 5.03 \\
+160 & 1.56E-08 & 5.03 & 3.95E-09 & 5.03 \\
+180 & 8.65E-09 & 5.02 & 2.19E-09 & 5.03 \\
+200 & 5.10E-09 & 5.02 & 1.29E-09 & 5.02 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{算例 1：二维黎曼问题（Riemann1）}
+
+\begin{example}[四象限黎曼问题]\label{ex:riemann1}
+初值\cite{fan2024}：
+\begin{equation}
+    (\rho, u, v, p) = \begin{cases}
+        (0.8,\ 0,\ 0,\ 1),      & (x,y) \in [0,1)\times[0,1), \\
+        (1,\ 0.7276,\ 0,\ 1),   & (x,y) \in [0,1)\times[1,2], \\
+        (1,\ 0,\ 0.7276,\ 1),   & (x,y) \in [1,2]\times[0,1), \\
+        (0.5313,\ 0,\ 0,\ 0.4), & (x,y) \in [1,2]\times[1,2].
+    \end{cases}
+\end{equation}
+计算域 $[0,2]\times[0,2]$，对称边界，$t_{\text{end}} = 0.52$。
+\end{example}
+
+\subsection{算例 2：二维黎曼问题（Riemann2）}
+
+\begin{example}[四象限黎曼问题]\label{ex:riemann2}
+初值\cite{luo2021}：
+\begin{equation}
+    (\rho, u, v, p) = \begin{cases}
+        (0.138,\ 1.206,\ 1.206,\ 0.029), & (x,y) \in [0,0.8)\times[0,0.8), \\
+        (0.5323,\ 1.206,\ 0,\ 0.3),      & (x,y) \in [0,0.8)\times[0.8,1], \\
+        (0.5323,\ 0,\ 1.206,\ 0.3),      & (x,y) \in [0.8,1]\times[0,0.8), \\
+        (1.5,\ 0,\ 0,\ 1.5),             & (x,y) \in [0.8,1]\times[0.8,1].
+    \end{cases}
+\end{equation}
+计算域 $[0,1]\times[0,1]$，对称边界，$t_{\text{end}} = 0.8$，$\gamma = 1.4$。
+\end{example}
+
+\subsection{算例 3：Rayleigh-Taylor 不稳定性（RTI）}
+
+\begin{example}[RTI]\label{ex:rti}
+初值\cite{fleischmann2019}（$\gamma = 5/3$）：
+\begin{equation}
+    (\rho, u, v, p) = \begin{cases}
+        (2,\ 0,\ -0.025 c \cos(8\pi x),\ 1+2y),   & 0 \leq y < 0.5, \\
+        (1,\ 0,\ -0.025 c \cos(8\pi x),\ y + 1.5), & 0.5 \leq y \leq 1,
+    \end{cases}
+\end{equation}
+其中声速 $c = \sqrt{\gamma p / \rho}$。计算域 $[0,0.25]\times[0,1]$，
+左右滑移壁面边界，上下为特殊（固定流态）边界，$t_{\text{end}} = 1.95$，
+需在 $y$ 方向加入重力源项 $g = 1$。
+\end{example}
+
+%=============================================================================
+\section{使用说明}
+%=============================================================================
+
+\subsection{编译}
+
+程序依赖支持 C++17 的 MPI 编译器（如 OpenMPI 或 MPICH 对应的 \texttt{mpicxx}）。
+
+\begin{lstlisting}[language=bash, numbers=none]
+make clean
+make
+\end{lstlisting}
+
+\begin{remark}
+    当前 \texttt{makefile} 使用 \texttt{-O4} 选项，GCC 不支持该级别（最高为 \texttt{-O3}），
+    建议改为 \texttt{-O3 -march=native}。
+\end{remark}
+
+\subsection{配置参数}
+
+修改 \texttt{input/config.cfg} 以设置运行参数（表~\ref{tab:config}）。
+
+\begin{table}[H]
+\centering
+\caption{配置文件参数说明}
+\label{tab:config}
+\begin{tabular}{cll}
+\toprule
+参数名 & 取值 & 含义 \\
+\midrule
+\texttt{TESTCASE} & 0 / 1 / 2 / 3 & 算例编号（光滑 / 黎曼1 / 黎曼2 / RTI）\\
+\texttt{SCHEME}   & 0 / 1 / 2 / 3 & 重构格式（WENOJS / WENOZ / WENOZP / WENOZPI）\\
+\texttt{RKMETH}   & 0 / 1 / 2     & 时间推进（RK1 / RK2 / RK3）\\
+\texttt{CFL}      & 如 0.6        & CFL 数 \\
+\texttt{ELEMNUMX} & 如 200        & $x$ 方向网格点数 \\
+\texttt{ELEMNUMY} & 如 200        & $y$ 方向网格点数 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{运行}
+
+\begin{lstlisting}[language=bash, numbers=none]
+# 以 4 个 MPI 进程运行
+mpirun -np 4 ./bin/program
+\end{lstlisting}
+
+串行运行只需将进程数设为 1：
+\begin{lstlisting}[language=bash, numbers=none]
+mpirun -np 1 ./bin/program
+\end{lstlisting}
+
+\subsection{输出文件}
+
+计算结果保存在 \texttt{output/<时间戳>\_<算例>\_<格式>\_<NxM>/} 目录中：
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+文件名 & 说明 \\
+\midrule
+\texttt{solution\_initial.plt} & 初始解（Tecplot 格式） \\
+\texttt{solution\_final.plt}   & 终态解（Tecplot 格式） \\
+\texttt{error\_final.plt}      & 误差分布（仅光滑算例）\\
+\texttt{accuracy\_final.csv}   & $L^1$、$L^2$、$L^\infty$ 误差（仅光滑算例）\\
+\texttt{sourceCode/}           & 本次运行的源代码备份 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%=============================================================================
+\section{已知问题}
+%=============================================================================
+
+\begin{enumerate}
+    \item \textbf{WENOZP 整数除法 Bug}（\texttt{Utility.hpp}）：
+          \texttt{pow(deltaX, 2/3)} 中 \texttt{2/3} 为整数除法，值为 0，导致 $\lambda \equiv 1$，
+          正则化项退化，格式表现异常。修复方法：改为 \texttt{pow(deltaX, 2.0/3.0)}。
+
+    \item \textbf{\texttt{getLLFRiemannFlux} 循环 Bug}（\texttt{equations.hpp}）：
+          循环体内固定写 \texttt{Flux[0..3]} 而未使用循环变量 \texttt{r}。
+          该函数当前不在主流程中调用，但存在隐患。
+
+    \item \textbf{MPI 错误处理}：程序在错误路径中使用 \texttt{std::cin.get() + exit(1)}，
+          在多进程环境下会造成非错误进程挂起。应改为 \texttt{MPI\_Abort(MPI\_COMM\_WORLD, 1)}。
+
+    \item \textbf{$y$ 方向无 MPI 并行}：当前仅对 $x$ 方向做域分解，
+          $y$ 方向串行计算，大规模算例时 $y$ 方向为性能瓶颈。
+
+    \item \textbf{\texttt{GatherAllUhToRank0} 串行收集}：Rank 0 逐一调用 \texttt{MPI\_Recv}，
+          大进程数下输出成为通信瓶颈，建议改用 \texttt{MPI\_Gatherv}。
+\end{enumerate}
+
+%=============================================================================
+\section{主要类与函数索引}
+%=============================================================================
+
+\subsection{类 \texttt{CWENOFD}（\texttt{WENOFD.hpp} / \texttt{WENOFD.cpp}）}
+
+\begin{table}[H]
+\centering
+\caption{\texttt{CWENOFD} 主要成员函数}
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+函数名 & 功能描述 \\
+\midrule
+\texttt{run(option)} & 主控函数：初始化 $\to$ 时间推进循环 $\to$ 输出 \\
+\texttt{initializeSolver(option)} & 解析参数、分配 MPI 区域、构建网格、分配内存 \\
+\texttt{initializeAve()} & 用初始条件赋值各网格点的守恒变量 \\
+\texttt{RunRK1/2/3(deltaT)} & 一/二/三阶 SSP-RK 时间推进 \\
+\texttt{assembleRHS()} & 计算空间离散右端项（通量项 + 源项）\\
+\texttt{assembleBoundaryTerm()} & 核心：通量分裂、特征投影、WENO 重构、反投影 \\
+\texttt{assembleSourceTerm()} & 添加 RTI 算例的重力源项 \\
+\texttt{calculateDeltaT()} & CFL 条件计算全局最小时间步长 \\
+\texttt{exchangeGhostCellsValue()} & MPI 非阻塞通信，交换相邻进程的 ghost 单元 \\
+\texttt{setBoundary()} & 填充四个方向的 ghost 单元（各类边界条件）\\
+\texttt{useWENO(...)} & 根据 \texttt{m\_scheme} 分发至具体 WENO 重构函数 \\
+\texttt{outputAve(prefix)} & 收集数据至 rank 0 并输出 Tecplot \texttt{.plt} 文件 \\
+\texttt{outputAccuracy(prefix)} & 计算并输出 $L^1$/$L^2$/$L^\infty$ 误差 \\
+\texttt{GatherAllUhToRank0()} & MPI 汇聚各进程数据至 rank 0 \\
+\texttt{backupProjectFiles()} & 将源代码备份至输出目录 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{类 \texttt{EulerEquation}（\texttt{equations.hpp}）}
+
+封装了欧拉方程的所有物理信息，包括：
+\begin{itemize}
+    \item 物理通量 \texttt{getPhyFlux[X/Y]}；
+    \item 最大特征值 \texttt{getMaxEigenValue[X/Y]}；
+    \item 左/右特征矩阵 \texttt{get[L/R]EigenMatrix[X/Y]}；
+    \item LLF 通量分裂 \texttt{fluxSplit[X/Y]}；
+    \item 各算例初值与边界类型设置 \texttt{setEquationParameters}；
+    \item 精确解函数（用于误差计算）。
+\end{itemize}
+
+\subsection{WENO 重构函数（\texttt{Utility.hpp}）}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+函数名（5 参数版本） & 对应格式 \\
+\midrule
+\texttt{WENO5threconstruction(...)} & WENO-JS \\
+\texttt{WENO5Zthreconstruction(...)} & WENO-Z \\
+\texttt{WENO5ZPtheconstruction(..., deltaX)} & WENO-ZP \\
+\texttt{WENO5ZPItheconstruction(...)} & WENO-ZPI \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+注：头文件中每种格式还有带 \texttt{gp\_num} 参数的重载版本，
+这是早期有限体积框架的遗留代码，当前求解器不使用。
+
+%=============================================================================
+\clearpage
+\begin{thebibliography}{99}
+
+\bibitem{borges2008}
+Borges, R., Carmona, M., Costa, B., \& Don, W. S. (2008).
+An improved weighted essentially non-oscillatory scheme for hyperbolic conservation laws.
+\textit{Journal of Computational Physics}, 227(6), 3191--3211.
+
+\bibitem{acker2016}
+Acker, F., de R. Borges, R. B., \& Costa, B. (2016).
+An improved WENO-Z scheme.
+\textit{Journal of Computational Physics}, 313, 726--753.
+
+\bibitem{luo2021}
+Luo, X., \& Wu, S.-P. (2021).
+Improvement of the WENO-Z+ scheme.
+\textit{Computers \& Fluids}, 218, 104855.
+
+\bibitem{gottlieb2001}
+Gottlieb, S., Shu, C.-W., \& Tadmor, E. (2001).
+Strong stability-preserving high-order time discretization methods.
+\textit{SIAM Review}, 43(1), 89--112.
+
+\bibitem{shu1997}
+Shu, C.-W. (1997).
+Essentially Non-Oscillatory and Weighted Essentially Non-Oscillatory Schemes for Hyperbolic Conservation Laws.
+\textit{NASA/CR-97-206253}.
+
+\bibitem{fan2024}
+Fan, C., \& Wu, K. (2024).
+High-order oscillation-eliminating Hermite WENO method for hyperbolic conservation laws.
+\textit{Journal of Computational Physics}, 519, 113435.
+
+\bibitem{fleischmann2019}
+Fleischmann, N., Adami, S., \& Adams, N. A. (2019).
+Numerical symmetry-preserving techniques for low-dissipation shock-capturing schemes.
+\textit{Computers \& Fluids}, 189, 94--107.
+
+\end{thebibliography}
+
+\end{document}

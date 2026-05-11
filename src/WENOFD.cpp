@@ -1165,77 +1165,77 @@ void CWENOFD::setBoundary(void)
 
 void CWENOFD::outputAve(std::string prefix)
 {
-    // 收集数据到线程0，使用线程0输出数据到 plt 文件里
-    // m_MPITimer.start();
-    exchangeGhostCellsValue();
-    // m_MPITimer.pause();
-
-    // m_outputTimer.start();
-    setBoundary();
-    GatherAllUhToRank0();
-
-    // output
     if (m_rank == 0)
-    {
         std::cout << "Outputting solution at grid points..." << std::endl;
 
-        const int VitalVarNum = equation->getVitalVarNum();
-        Array1D<double> VitalVar(VitalVarNum);
-        Array1D<double> VitalVarAve(VitalVarNum);
+    const int VitalVarNum = equation->getVitalVarNum();
+    Array1D<double> VitalVar(VitalVarNum);
+    Array1D<std::string> VitalVarName(VitalVarNum);
+    equation->getVitalVarName(VitalVarName);
 
-        // Names of variables to be output
-        Array1D<std::string> VitalVarName(VitalVarNum);
-        equation->getVitalVarName(VitalVarName);
+    // 所有进程构造相同的文件头（内容确定，无需通信）
+    std::ostringstream headerStream;
+    headerStream << "TITLE=DGSolution\n"
+                 << "VARIABLES=X Y ";
+    for (int k = 0; k < VitalVarNum; k++)
+        headerStream << VitalVarName[k] << " ";
+    headerStream << "\nZONE T=TA, I=" << m_worldPointNumY
+                 << ", J=" << m_worldPointNumX
+                 << ", DATAPACKING=POINT\n";
+    const std::string headerStr = headerStream.str();
 
-        // Output file name
-        std::string filename = m_outputDir + "solution_" + prefix + ".plt";
-        std::ofstream outputFile(filename);
-
-        if (outputFile.is_open())
+    // 每个进程独立地将自己负责的网格点数据序列化为字符串（并行进行）
+    std::ostringstream localBuf;
+    Array1D<double> Uhh(m_varNum);
+    for (int ei = m_startPointX; ei < m_endPointX; ei++)
+    {
+        for (int ej = m_startPointY; ej < m_endPointY; ej++)
         {
-            outputFile << "TITLE=DGSolution" << std::endl;
-            outputFile << "VARIABLES=";
-            outputFile << "X ";
-            outputFile << "Y ";
-            for (int k = 0; k != VitalVarNum; k++)
-                outputFile << VitalVarName[k] << " ";
+            for (int r = 0; r < m_varNum; r++)
+                Uhh[r] = m_Uh[ei][ej].vector[r];
+            equation->getVitalVarVal(Uhh, VitalVar);
 
-            outputFile << std::endl;
-            outputFile << "ZONE T=TA, ";
-            outputFile << "I="; // Y - direction
-            outputFile << m_worldPointNumY << ", ";
-            outputFile << "J="; // X - direction
-            outputFile << m_worldPointNumX << ", ";
-            outputFile << "DATAPACKING = POINT" << std::endl;
-
-            for (int ei = m_ghostCellNum; ei != m_worldPointNumX + m_ghostCellNum; ei++)
-            {
-                for (int ej = m_ghostCellNum; ej != m_worldPointNumY + m_ghostCellNum; ej++)
-                {
-                    Array1D<double> Uhh(m_varNum);
-                    for (int r = 0; r != m_varNum; r++)
-                        Uhh[r] = m_worldUh[ei][ej].vector[r];
-
-                    // Output the values of the required variables one by one
-                    equation->getVitalVarVal(Uhh, VitalVar);
-
-                    outputFile << m_worldGrids[ei][ej].m_xCenter << " ";
-                    outputFile << m_worldGrids[ei][ej].m_yCenter << " ";
-
-                    for (int k = 0; k != VitalVarNum; k++)
-                        outputFile << VitalVar[k] << " ";
-                    outputFile << std::endl;
-                }
-            }
-
-            outputFile.close();
+            localBuf << m_grids[ei][ej].m_xCenter << " "
+                     << m_grids[ei][ej].m_yCenter << " ";
+            for (int k = 0; k < VitalVarNum; k++)
+                localBuf << VitalVar[k] << " ";
+            localBuf << "\n";
         }
-        else
-        {
-            std::cout << "Unable to open file" << std::endl;
-        }
-        std::cout << "The file " + filename + " has been output successfully..." << std::endl;
     }
+    const std::string localStr = localBuf.str();
+    const MPI_Offset localSize = static_cast<MPI_Offset>(localStr.size());
+
+    // 用 MPI_Exscan 做前缀和，计算每个进程在文件中的写入偏移量
+    MPI_Offset myOffset = 0;
+    MPI_Exscan(&localSize, &myOffset, 1, MPI_OFFSET, MPI_SUM, MPI_COMM_WORLD);
+    if (m_rank == 0) myOffset = 0; // rank 0 的 Exscan 结果未定义，手动置 0
+    myOffset += static_cast<MPI_Offset>(headerStr.size());
+
+    // 用 MPI-IO 并发写文件
+    const std::string filename = m_outputDir + "solution_" + prefix + ".plt";
+    MPI_File fh;
+    MPI_File_open(MPI_COMM_WORLD, filename.c_str(),
+                  MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+
+    // 预先设置文件大小，避免各进程并发扩展文件时产生竞争
+    MPI_Offset myEnd = myOffset + localSize;
+    MPI_Offset totalSize;
+    MPI_Allreduce(&myEnd, &totalSize, 1, MPI_OFFSET, MPI_MAX, MPI_COMM_WORLD);
+    MPI_File_set_size(fh, totalSize);
+
+    // rank 0 写文件头
+    if (m_rank == 0)
+        MPI_File_write_at(fh, 0, headerStr.c_str(),
+                          static_cast<int>(headerStr.size()), MPI_CHAR, MPI_STATUS_IGNORE);
+
+    // 所有进程并发写各自的数据块
+    MPI_File_write_at(fh, myOffset, localStr.c_str(),
+                      static_cast<int>(localSize), MPI_CHAR, MPI_STATUS_IGNORE);
+
+    MPI_File_close(&fh);
+
+    if (m_rank == 0)
+        std::cout << "The file " << filename << " has been output successfully..." << std::endl;
 
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -1413,13 +1413,11 @@ void CWENOFD::backupProjectFiles()
 
     // 需要复制的目录列表
     const std::vector<std::pair<std::filesystem::path, std::filesystem::path>> dirsToCopy = {
-        {"./bin", codeOutputDir / "bin"},
-        {"./build", codeOutputDir / "build"},
         {"./docs", codeOutputDir / "docs"},
         {"./include", codeOutputDir / "include"},
         {"./src", codeOutputDir / "src"},
         {"./makefile", codeOutputDir / "makefile"},
-        {"./third_party", codeOutputDir / "third_party"},
+        {"./utils", codeOutputDir / "utils"},
         {"./input", codeOutputDir / "input"}};
 
     // 执行复制操作
