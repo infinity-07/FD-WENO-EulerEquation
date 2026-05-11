@@ -25,3 +25,5 @@ program
 *.plt
 
 *.csv
+
+*.pdf
