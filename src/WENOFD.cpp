@@ -1431,69 +1431,10 @@ void CWENOFD::backupProjectFiles()
 
 void CWENOFD::debugOutput(const std::string &prefix)
 {
-    // 输出守恒变量到文本文件，便于调试
-
-    // m_MPITimer.start();
     exchangeGhostCellsValue();
-    // m_MPITimer.pause();
-
-    // m_outputTimer.start();
     setBoundary();
     GatherAllUhToRank0();
 
-    // output
-    // if (m_rank == 0)
-    // {
-    //     logMessage("outputing average solution...");
-
-    //     // Output file name
-    //     // std::string filename = m_outputDir + "solution_" + prefix + ".plt";
-    //     // std::ofstream outputFile(filename);
-
-    //     // if (outputFile.is_open())
-    //     // {
-    //     //     outputFile << "TITLE=DGSolution" << std::endl;
-    //     //     outputFile << "VARIABLES=";
-    //     //     outputFile << "X ";
-    //     //     outputFile << "Y ";
-    //     //     for (int k = 0; k != VitalVarNum; k++)
-    //     //         outputFile << VitalVarName[k] << " ";
-
-    //     //     outputFile << std::endl;
-    //     //     outputFile << "ZONE T=TA, ";
-    //     //     outputFile << "I="; // Y - direction
-    //     //     outputFile << m_worldPointNumY << ", ";
-    //     //     outputFile << "J="; // X - direction
-    //     //     outputFile << m_worldPointNumX << ", ";
-    //     //     outputFile << "DATAPACKING = POINT" << std::endl;
-
-    //     //     for (int ei = m_ghostCellNum; ei != m_worldPointNumX + m_ghostCellNum; ei++)
-    //     //     {
-    //     //         for (int ej = m_ghostCellNum; ej != m_worldPointNumY + m_ghostCellNum; ej++)
-    //     //         {
-    //     //             Array1D<double> Uhh(m_varNum);
-    //     //             for (int r = 0; r != m_varNum; r++)
-    //     //                 Uhh[r] = m_worldUh[ei][ej].vector[r];
-
-    //     //             outputFile << m_worldGrids[ei][ej].m_xCenter << " ";
-    //     //             outputFile << m_worldGrids[ei][ej].m_yCenter << " ";
-
-    //     //             for (int k = 0; k != VitalVarNum; k++)
-    //     //                 outputFile << VitalVar[k] << " ";
-    //     //             outputFile << std::endl;
-    //     //         }
-    //     //     }
-
-    //     //     outputFile.close();
-    //     // }
-    //     // else
-    //     // {
-    //     //     std::cout << "Unable to open file" << std::endl;
-    //     // }
-    //     // logMessage("The file " + filename + " has been output successfully...");
-    // }
-
-    // 每个守恒变量单独输出一个 txt 文件
     if (m_rank == 0)
     {
         for (int r = 0; r != m_varNum; ++r)
@@ -1505,23 +1446,17 @@ void CWENOFD::debugOutput(const std::string &prefix)
             {
                 outputFile << std::setprecision(15) << std::setw(20) << std::setiosflags(std::ios::scientific);
                 for (int ei = m_ghostCellNum; ei != m_worldPointNumX + m_ghostCellNum; ei++)
-                {
                     for (int ej = m_ghostCellNum; ej != m_worldPointNumY + m_ghostCellNum; ej++)
-                    {
-                        outputFile << m_worldGrids[ei][ej].m_xCenter << " " << m_worldGrids[ei][ej].m_yCenter << " " << m_worldUh[ei][ej].vector[r] << " ";
-                        outputFile << std::endl;
-                    }
-                }
-
+                        outputFile << m_worldGrids[ei][ej].m_xCenter << " "
+                                   << m_worldGrids[ei][ej].m_yCenter << " "
+                                   << m_worldUh[ei][ej].vector[r] << "\n";
                 outputFile.close();
             }
             else
             {
-                std::cout << "Unable to open file" << std::endl;
+                std::cerr << "Unable to open file: " << filename << std::endl;
             }
         }
     }
     MPI_Barrier(MPI_COMM_WORLD);
-
-    // m_outputTimer.pause();
 }
